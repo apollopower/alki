@@ -4,16 +4,12 @@
 
 Alki takes a Hugging Face model, optimizes it, and produces a self-contained deployment bundle that can run efficiently on edge devices.
 
----
-
 ## ✨ Goals
 
 * **Simple**: one command to turn a Hugging Face model into an edge-ready bundle.
 * **Flexible**: quantization & optimization built in, with hardware-specific presets.
 * **Portable**: bundles run with minimal dependencies on the target device.
 * **Extensible**: plugin architecture for new backends (TensorRT-LLM, MLX, QNN, etc.).
-
----
 
 ## 🗺️ Roadmap (Phase 1)
 
@@ -24,8 +20,6 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
 * [ ] ORT GenAI runtime integration (CPU EP)
 * [ ] OpenVINO preset (INT8 acceleration on Intel CPUs/NPUs)
 * [ ] Basic validation harness (perplexity, latency, memory)
-
----
 
 ## 🚀 Quickstart (planned)
 
@@ -47,8 +41,6 @@ alki run --bundle dist/llama3b-cpu --prompt "Hello from the edge!"
 alki bench --bundle dist/llama3b-cpu
 ```
 
----
-
 ## 📦 Bundle Layout (early draft)
 
 ```
@@ -59,16 +51,12 @@ dist/llama3b-cpu/
   runners/             # lightweight launchers
 ```
 
----
-
 ## 🔌 Presets
 
 * **cpu** → ONNX Runtime GenAI, CPU execution provider.
 * **openvino** → ONNX Runtime GenAI + Intel OpenVINO EP with INT8 calibration.
 
 More presets coming (TensorRT-LLM, MLX, ExecuTorch).
-
----
 
 ## 🛠️ Tech Stack
 
@@ -79,15 +67,11 @@ More presets coming (TensorRT-LLM, MLX, ExecuTorch).
 * **Pytest** for validation harness
 * **Docker (optional)** for reproducible builds (OpenVINO builder image planned)
 
----
-
 ## 📜 License
 
 ### Apache-2.0
 
 Free to use, modify, and contribute.
-
----
 
 ## 🤝 Contributing
 
