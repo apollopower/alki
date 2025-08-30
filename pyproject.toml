@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alki"
+version = "0.1.0"
+description = "Alki 🌊 — an open-source toolchain for deploying LLMs at the edge"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+dependencies = [
+  "typer[all]>=0.9",
+  "onnx>=1.15",
+  "onnxruntime>=1.20",
+  "onnxruntime-genai>=0.5",
+  "transformers>=4.44",
+  "safetensors>=0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "black",
+  "ruff",
+]
+# For Intel acceleration / OpenVINO EP:
+openvino = [
+  "openvino>=2025.1.0",
+]
+
+[project.scripts]
+alki = "alki.cli:app"
