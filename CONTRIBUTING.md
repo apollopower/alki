@@ -17,6 +17,11 @@ By participating, you agree to uphold the [Contributor Covenant Code of Conduct]
 ### Repository Setup
 
 ```bash
+# Setup your venv
+python -m venv .venv
+source .venv/bin/activate   # Linux/macOS
+# or .venv\Scripts\activate on Windows
+
 # Install in editable mode
 pip install -e .[dev]
 ```
