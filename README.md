@@ -80,16 +80,19 @@ For contributors and developers:
 
 ```bash
 # Setup development environment
-pip install -e .[dev]
+make install
 
-# Run tests
-pytest
+# Run all CI checks locally (recommended before pushing)
+make check
 
-# Format code
-black src/ tests/
+# Auto-format and run all checks
+make all
 
-# Lint code
-ruff check src/ tests/
+# Individual commands
+make test          # Run tests
+make format        # Format code with black
+make lint          # Lint with ruff
+make clean         # Clean cache files
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.

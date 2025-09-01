@@ -26,11 +26,28 @@ source .venv/bin/activate   # Linux/macOS
 pip install -e .[dev]
 ```
 
-### Running Tests
+### Development Workflow
 
 ```bash
-pytest tests/
+# Setup environment
+make install
+
+# Before committing/pushing, run all checks
+make check
+
+# Auto-format code and run checks
+make all
+
+# Individual tasks
+make test          # Run tests only
+make format        # Format code with black
+make lint          # Lint with ruff
+make clean         # Clean cache files
 ```
+
+**Pre-push checklist:**
+- Run `make check` to ensure all CI checks pass locally
+- This runs the same linting, formatting, and test checks as GitHub Actions
 
 ## 📦 Project Structure (early draft)
 
