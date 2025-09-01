@@ -21,6 +21,13 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
 * [ ] OpenVINO preset (INT8 acceleration on Intel CPUs/NPUs)
 * [ ] Basic validation harness (perplexity, latency, memory)
 
+## 🗺️ Roadmap (Phase 2)
+
+* [ ] Optimum backend integration (leverage HF Optimum as building blocks)
+  * [ ] Optimum-Intel for OpenVINO flows
+  * [ ] Optimum-NVIDIA for TensorRT-LLM
+  * [ ] Unified backend plugin interface
+
 ## 🚀 Quickstart (planned)
 
 ```bash
@@ -66,6 +73,26 @@ More presets coming (TensorRT-LLM, MLX, ExecuTorch).
 * **OpenVINO Toolkit** for Intel acceleration
 * **Pytest** for validation harness
 * **Docker (optional)** for reproducible builds (OpenVINO builder image planned)
+
+## 🔧 Development
+
+For contributors and developers:
+
+```bash
+# Setup development environment
+pip install -e .[dev]
+
+# Run tests
+pytest
+
+# Format code
+black src/ tests/
+
+# Lint code
+ruff check src/ tests/
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
 ## 📜 License
 

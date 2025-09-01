@@ -1,0 +1,11 @@
+# General
+.venv
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Development Tools
+Claude.local.md
