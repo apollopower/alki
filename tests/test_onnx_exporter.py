@@ -90,7 +90,7 @@ def test_export_successful_cpu(mock_onnx_dependencies, mock_model_artifacts):
         mock_onnx_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
-            "gpt2", export=True, use_cache=True, provider="CPUExecutionProvider"
+            "gpt2", export=True, use_cache=False, provider="CPUExecutionProvider"
         )
 
         # Verify output directory was created
@@ -120,7 +120,7 @@ def test_export_successful_gpu(mock_onnx_dependencies, mock_model_artifacts):
         mock_onnx_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
-            "gpt2", export=True, use_cache=True, provider="CUDAExecutionProvider"
+            "gpt2", export=True, use_cache=False, provider="CUDAExecutionProvider"
         )
 
 

@@ -50,7 +50,10 @@ make lint          # Lint with ruff
 make clean         # Clean cache files
 
 # Test real ONNX export with actual models (optional, not part of CI)
-python scripts/test_real_onnx_export.py --model distilgpt2
+python scripts/test_onnx_export_e2e.py --model distilgpt2
+
+# Test end-to-end quantization pipeline (optional, takes ~2 minutes)
+python scripts/test_quantization_e2e.py
 ```
 
 **Pre-push checklist:**
@@ -97,9 +100,22 @@ This makes it easy to add new hardware targets without touching the core framewo
 
 All contributions should include:
 
-* Unit tests (pytest) for core logic
-* Integration test for at least one model (e.g., Llama-3.2-3B with W8A8 quant on CPU)
-* Benchmark logs (optional, but encouraged for backend contributions)
+* **Unit tests (pytest)** for core logic
+* **Integration test** for at least one model (e.g., GPT-2 with W8A8 quant on CPU)
+* **Benchmark logs** (optional, but encouraged for backend contributions)
+
+### Quantization Testing
+
+The project includes SmoothQuant W8A8 quantization with comprehensive testing:
+
+* **Unit tests**: `pytest tests/test_quantizer.py` (fast, <5 seconds)
+* **End-to-end test**: `python scripts/test_quantization_e2e.py` (slower, ~2 minutes)
+* **Quick demo**: `python scripts/demo_quantization.py` (no model download needed)
+
+When contributing quantization-related changes:
+- Ensure unit tests pass for configuration validation and smoothing calculations
+- Run the end-to-end test to verify compatibility with real models
+- Test with different alpha values (0.0, 0.5, 1.0) to verify smoothing behavior
 
 ## 📜 License
 
