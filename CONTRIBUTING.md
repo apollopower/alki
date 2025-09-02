@@ -28,6 +28,11 @@ pip install -e .[dev]
 
 ### Development Workflow
 
+**IMPORTANT**: Always activate the virtual environment before running any commands:
+```bash
+source .venv/bin/activate  # Required for all commands below
+```
+
 ```bash
 # Setup environment
 make install
@@ -43,11 +48,16 @@ make test          # Run tests only
 make format        # Format code with black
 make lint          # Lint with ruff
 make clean         # Clean cache files
+
+# Test real ONNX export with actual models (optional, not part of CI)
+python scripts/test_real_onnx_export.py --model distilgpt2
 ```
 
 **Pre-push checklist:**
+- Ensure virtual environment is activated (`source .venv/bin/activate`)
 - Run `make check` to ensure all CI checks pass locally
 - This runs the same linting, formatting, and test checks as GitHub Actions
+- Optionally run real integration tests for end-to-end validation
 
 ## 📦 Project Structure (early draft)
 

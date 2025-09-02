@@ -9,3 +9,16 @@ __pycache__/
 
 # Development Tools
 Claude.local.md
+
+# ONNX Export Outputs
+onnx_output/
+*.onnx
+
+# Model Downloads (if cached locally)
+models/
+model_cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
