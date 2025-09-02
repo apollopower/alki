@@ -421,6 +421,9 @@ class SmoothQuantizer:
         # Ensure output directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Reset calibration data iterator for quantization
+        calibration_data.rewind()
+
         # Use ONNX Runtime's static quantization
         quantize_static(
             model_input=str(temp_model_path),

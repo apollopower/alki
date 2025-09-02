@@ -180,15 +180,31 @@ def build(
                 quantizer = SmoothQuantizer(quant_config)
                 quantized_model_path = Path(temp_dir) / "quantized_model.onnx"
 
-                quantizer.quantize_model(
-                    onnx_artifacts["onnx_path"], quantized_model_path, calibration_data
-                )
+                try:
+                    quantizer.quantize_model(
+                        onnx_artifacts["onnx_path"],
+                        quantized_model_path,
+                        calibration_data,
+                    )
 
-                quantization_artifacts = {
-                    "quantized_model_path": quantized_model_path,
-                    "config": quant_config,
-                }
-                console.print("✓ Quantization complete")
+                    quantization_artifacts = {
+                        "quantized_model_path": quantized_model_path,
+                        "config": quant_config,
+                    }
+                    console.print("✓ Quantization complete")
+                except Exception as e:
+                    # Provide helpful error message
+                    error_msg = str(e)
+                    if "No data is collected" in error_msg:
+                        console.print(
+                            "❌ [red]Quantization failed: No calibration data collected[/red]"
+                        )
+                        console.print(
+                            "   This may indicate an issue with the calibration data iterator."
+                        )
+                    else:
+                        console.print(f"❌ [red]Quantization failed: {error_msg}[/red]")
+                    raise RuntimeError(f"Quantization failed: {error_msg}")
             else:
                 console.print(
                     "\n[bold yellow]Step 3:[/bold yellow] Skipping quantization"

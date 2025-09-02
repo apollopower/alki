@@ -15,8 +15,9 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
 
 * [x] Model ingestion (HF → ONNX export)
 * [x] SmoothQuant W8A8 quantization pass
-* [ ] Bundle format (`bundle.yaml` + tokenizer + model artifacts)
-* [ ] CLI (`alki build`, `alki run`, `alki bench`)
+* [x] Bundle format (`bundle.yaml` + tokenizer + model artifacts)
+* [x] CLI (`alki build`, `alki info`, `alki list`)
+* [ ] Runtime commands (`alki run`, `alki bench`)
 * [ ] ORT GenAI runtime integration (CPU EP)
 * [ ] OpenVINO preset (INT8 acceleration on Intel CPUs/NPUs)
 * [ ] Basic validation harness (perplexity, latency, memory)
@@ -28,34 +29,45 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
   * [ ] Optimum-NVIDIA for TensorRT-LLM
   * [ ] Unified backend plugin interface
 
-## 🚀 Quickstart (planned)
+## 🚀 Quickstart
 
 ```bash
-# Install (coming soon)
-pip install alki
+# Setup
+python -m venv .venv
+source .venv/bin/activate
+make install
 
-# Build a CPU bundle from a Hugging Face model
-alki build \
-  --model meta-llama/Llama-3.2-3B-Instruct \
+# Build a CPU bundle with quantization (74.6% size reduction)
+python -m src.cli.main build gpt2 \
+  --output dist \
   --target cpu \
   --preset balanced \
-  --out dist/llama3b-cpu
+  --alpha 0.5
 
-# Run it locally
-alki run --bundle dist/llama3b-cpu --prompt "Hello from the edge!"
+# Build without quantization
+python -m src.cli.main build gpt2 \
+  --output dist \
+  --no-quantize
 
-# Benchmark performance
-alki bench --bundle dist/llama3b-cpu
+# View bundle information
+python -m src.cli.main info dist/gpt2-cpu
+
+# List all bundles
+python -m src.cli.main list --path dist --verbose
+
+# Runtime inference (coming soon)
+# alki run --bundle dist/gpt2-cpu --prompt "Hello from the edge!"
 ```
 
-## 📦 Bundle Layout (early draft)
+## 📦 Bundle Layout
 
 ```
-dist/llama3b-cpu/
-  bundle.yaml          # config + presets
-  model.onnx           # quantized ONNX model
-  tokenizer/           # tokenizer.json, merges.txt, vocab
-  runners/             # lightweight launchers
+dist/gpt2-cpu/
+  bundle.yaml            # Bundle manifest with metadata and runtime config
+  model.onnx            # Quantized ONNX model (158MB from 622MB with SmoothQuant)
+  model_original.onnx   # Original FP32 model (if quantized)
+  tokenizer/            # tokenizer.json, tokenizer_config.json, vocab.json, merges.txt
+  runners/              # Lightweight launchers (placeholder for future)
 ```
 
 ## 🔌 Presets
@@ -69,7 +81,7 @@ More presets coming (TensorRT-LLM, MLX, ExecuTorch).
 
 Alki uses **SmoothQuant W8A8** for post-training quantization, providing:
 
-* **~75% model size reduction** (FP32 → INT8)
+* **74.6% model size reduction** (622MB → 158MB for GPT-2)
 * **2-4x faster inference** on CPUs with INT8 support
 * **Minimal accuracy loss** (<1% typical)
 * **No retraining required**
@@ -78,6 +90,8 @@ The `alpha` parameter controls smoothing strength:
 * `α=0.0`: Baseline quantization (fastest)
 * `α=0.5`: Balanced (recommended default)
 * `α=1.0`: Maximum smoothing (best for outlier-heavy models)
+
+**Note**: Warning messages during quantization are normal and expected part of the ONNX Runtime optimization process.
 
 ## 🛠️ Tech Stack
 
