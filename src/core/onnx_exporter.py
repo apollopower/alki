@@ -8,12 +8,24 @@ from optimum.onnxruntime import ORTModelForCausalLM
 
 @dataclass
 class OnnxExportConfig:
-    """Configuration for ONNX export."""
+    """Configuration for ONNX export.
+
+    Attributes:
+        opset_version: ONNX opset version for compatibility
+        use_gpu: Whether to use GPU provider for export
+        optimize: Whether to apply ONNX optimizations during export
+        output_dir: Optional custom output directory
+        use_cache: Whether to enable KV cache in exported model.
+                   False is recommended for quantization and edge deployment
+                   as it simplifies the model and reduces memory overhead.
+        dynamic_axes: Axes that can have variable sizes at runtime
+    """
 
     opset_version: int = 14
     use_gpu: bool = False
     optimize: bool = True
     output_dir: Optional[Path] = None
+    use_cache: bool = False  # Disabled by default for edge deployment
 
     # Dynamic axes for variable sequence lengths
     dynamic_axes: Dict[str, Dict[int, str]] = None
@@ -21,11 +33,19 @@ class OnnxExportConfig:
     def __post_init__(self):
         if self.dynamic_axes is None:
             # Default dynamic axes for causal LM models
-            self.dynamic_axes = {
+            base_axes = {
                 "input_ids": {0: "batch_size", 1: "sequence_length"},
                 "attention_mask": {0: "batch_size", 1: "sequence_length"},
-                "past_key_values": {0: "batch_size", 2: "past_sequence_length"},
             }
+
+            # Add KV cache axes only if cache is enabled
+            if self.use_cache:
+                base_axes["past_key_values"] = {
+                    0: "batch_size",
+                    2: "past_sequence_length",
+                }
+
+            self.dynamic_axes = base_axes
 
 
 class OnnxExporter:
@@ -60,7 +80,7 @@ class OnnxExporter:
             ort_model = ORTModelForCausalLM.from_pretrained(
                 model_id,
                 export=True,
-                use_cache=True,
+                use_cache=self.config.use_cache,
                 provider=(
                     "CPUExecutionProvider"
                     if not self.config.use_gpu

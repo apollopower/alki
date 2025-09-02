@@ -14,7 +14,7 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
 ## 🗺️ Roadmap (Phase 1)
 
 * [x] Model ingestion (HF → ONNX export)
-* [ ] SmoothQuant W8A8 quantization pass
+* [x] SmoothQuant W8A8 quantization pass
 * [ ] Bundle format (`bundle.yaml` + tokenizer + model artifacts)
 * [ ] CLI (`alki build`, `alki run`, `alki bench`)
 * [ ] ORT GenAI runtime integration (CPU EP)
@@ -65,6 +65,20 @@ dist/llama3b-cpu/
 
 More presets coming (TensorRT-LLM, MLX, ExecuTorch).
 
+## ⚡ Quantization
+
+Alki uses **SmoothQuant W8A8** for post-training quantization, providing:
+
+* **~75% model size reduction** (FP32 → INT8)
+* **2-4x faster inference** on CPUs with INT8 support
+* **Minimal accuracy loss** (<1% typical)
+* **No retraining required**
+
+The `alpha` parameter controls smoothing strength:
+* `α=0.0`: Baseline quantization (fastest)
+* `α=0.5`: Balanced (recommended default)
+* `α=1.0`: Maximum smoothing (best for outlier-heavy models)
+
 ## 🛠️ Tech Stack
 
 * **Python 3.10+** (pipelines, CLI, quantization scripts)
@@ -97,7 +111,13 @@ make lint          # Lint with ruff
 make clean         # Clean cache files
 
 # Test real ONNX export with actual models (separate from unit tests)
-python scripts/test_real_onnx_export.py
+python scripts/test_onnx_export_e2e.py
+
+# Test end-to-end quantization pipeline with real models
+python scripts/test_quantization_e2e.py
+
+# Quick demo of quantization concepts and configuration
+python scripts/demo_quantization.py
 ```
 
 **Important**: All commands require an activated virtual environment:

@@ -143,7 +143,7 @@ def test_pipeline_with_custom_config(mock_all_dependencies):
         mock_all_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
-            "gpt2", export=True, use_cache=True, provider="CUDAExecutionProvider"
+            "gpt2", export=True, use_cache=False, provider="CUDAExecutionProvider"
         )
 
 
