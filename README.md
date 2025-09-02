@@ -13,7 +13,7 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
 
 ## 🗺️ Roadmap (Phase 1)
 
-* [ ] Model ingestion (HF → ONNX export)
+* [x] Model ingestion (HF → ONNX export)
 * [ ] SmoothQuant W8A8 quantization pass
 * [ ] Bundle format (`bundle.yaml` + tokenizer + model artifacts)
 * [ ] CLI (`alki build`, `alki run`, `alki bench`)
@@ -80,7 +80,9 @@ For contributors and developers:
 
 ```bash
 # Setup development environment
-make install
+python -m venv .venv
+source .venv/bin/activate
+make install  # or: pip install -e .[dev]
 
 # Run all CI checks locally (recommended before pushing)
 make check
@@ -93,6 +95,14 @@ make test          # Run tests
 make format        # Format code with black
 make lint          # Lint with ruff
 make clean         # Clean cache files
+
+# Test real ONNX export with actual models (separate from unit tests)
+python scripts/test_real_onnx_export.py
+```
+
+**Important**: All commands require an activated virtual environment:
+```bash
+source .venv/bin/activate  # Required before any make or python commands
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
