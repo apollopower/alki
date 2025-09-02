@@ -15,6 +15,8 @@ dependencies = [
   "onnxruntime>=1.20",
   "onnxruntime-genai>=0.5",
   "transformers>=4.44",
+  "huggingface_hub>=0.25",
+  "optimum>=1.23",
   "safetensors>=0.4",
 ]
 
