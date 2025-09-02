@@ -132,6 +132,9 @@ def test_quantization_pipeline():
             output_path = work_dir / f"quantized_alpha_{config.alpha}.onnx"
             
             try:
+                # Reset calibration data for each configuration
+                calibration_data.rewind()
+                
                 start_time = time.time()
                 quantized_path = quantizer.quantize_model(
                     onnx_path,

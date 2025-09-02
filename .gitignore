@@ -8,6 +8,7 @@ __pycache__/
 .pytest_cache/
 
 # Development Tools
+.vscode
 Claude.local.md
 
 # ONNX Export Outputs
