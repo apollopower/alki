@@ -35,6 +35,8 @@ from onnxruntime.quantization import (
     CalibrationDataReader,
 )
 
+from .constants import Defaults, ModelIO
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +68,11 @@ class SmoothQuantConfig:
         opset_version: ONNX opset version for compatibility.
     """
 
-    alpha: float = 0.5
-    calibration_samples: int = 128
+    alpha: float = Defaults.SMOOTHQUANT_ALPHA
+    calibration_samples: int = Defaults.CALIBRATION_SAMPLES
     per_channel: bool = True
     symmetric: bool = True
-    opset_version: int = 14
+    opset_version: int = Defaults.ONNX_OPSET_VERSION
 
     def __post_init__(self):
         """Validate configuration parameters."""
@@ -116,15 +118,13 @@ class CalibrationDataGenerator(CalibrationDataReader):
                 truncation=True,
                 max_length=max_length,
             )
-            # Basic inputs that all models need
             sample = {
-                "input_ids": inputs["input_ids"],
-                "attention_mask": inputs["attention_mask"],
+                ModelIO.INPUT_IDS: inputs[ModelIO.INPUT_IDS],
+                ModelIO.ATTENTION_MASK: inputs[ModelIO.ATTENTION_MASK],
             }
 
-            # Add position_ids if needed (common for GPT models)
-            batch_size, seq_len = inputs["input_ids"].shape
-            sample["position_ids"] = (
+            batch_size, seq_len = inputs[ModelIO.INPUT_IDS].shape
+            sample[ModelIO.POSITION_IDS] = (
                 np.arange(seq_len, dtype=np.int64)
                 .reshape(1, -1)
                 .repeat(batch_size, axis=0)
@@ -158,14 +158,6 @@ class SmoothQuantizer:
     Where s is chosen to balance the quantization difficulty.
     """
 
-    # Constants for dummy input generation
-    DEFAULT_BATCH_SIZE = 1
-    DEFAULT_SEQUENCE_LENGTH = 128
-
-    # Constants for numerical stability
-    MIN_SCALE = 1e-5
-    MAX_SCALE = 1e5
-
     def __init__(self, config: Optional[SmoothQuantConfig] = None):
         """
         Args:
@@ -189,10 +181,10 @@ class SmoothQuantizer:
         # Replace dynamic dimensions with reasonable defaults
         shape = [
             (
-                self.DEFAULT_BATCH_SIZE
+                Defaults.BATCH_SIZE
                 if dim in [None, "batch_size", "N"]
                 else (
-                    self.DEFAULT_SEQUENCE_LENGTH
+                    Defaults.SEQUENCE_LENGTH
                     if dim in ["sequence_length", "M"]
                     else (dim if isinstance(dim, int) else 1)
                 )
@@ -318,8 +310,7 @@ class SmoothQuantizer:
             # This balances quantization difficulty between activations and weights
             smooth_scale = np.power(act_scale / weight_scale, self.config.alpha / 2)
 
-            # Avoid numerical issues
-            smooth_scale = np.clip(smooth_scale, self.MIN_SCALE, self.MAX_SCALE)
+            smooth_scale = np.clip(smooth_scale, Defaults.MIN_SCALE, Defaults.MAX_SCALE)
 
             smoothing_scales[layer_name] = smooth_scale
 

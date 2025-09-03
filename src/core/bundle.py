@@ -18,6 +18,8 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import yaml
 
+from .constants import ExecutionProviders, ModelIO, Defaults, FileNames
+
 
 @dataclass
 class BundleMetadata:
@@ -87,16 +89,13 @@ class RuntimeConfig:
     """Configuration for running the bundled model."""
 
     # ONNX Runtime configuration
-    provider: str = "CPUExecutionProvider"  # Execution provider
-    opset_version: int = 14  # ONNX opset version
-    use_cache: bool = False  # Whether model uses KV cache
+    provider: str = ExecutionProviders.CPU
+    opset_version: int = Defaults.ONNX_OPSET_VERSION
+    use_cache: bool = False
 
-    # Input specifications
-    max_sequence_length: int = 512  # Maximum input sequence length
-    input_names: List[str] = field(
-        default_factory=lambda: ["input_ids", "attention_mask"]
-    )
-    output_names: List[str] = field(default_factory=lambda: ["logits"])
+    max_sequence_length: int = Defaults.MAX_SEQUENCE_LENGTH
+    input_names: List[str] = field(default_factory=lambda: ModelIO.DEFAULT_INPUTS)
+    output_names: List[str] = field(default_factory=lambda: ModelIO.DEFAULT_OUTPUTS)
 
     # Quantization settings (for runtime reference)
     is_quantized: bool = False
@@ -140,12 +139,14 @@ class RuntimeConfig:
     def from_dict(cls, data: Dict[str, Any]) -> "RuntimeConfig":
         """Create from dictionary loaded from YAML."""
         return cls(
-            provider=data.get("provider", "CPUExecutionProvider"),
-            opset_version=data.get("opset_version", 14),
+            provider=data.get("provider", ExecutionProviders.CPU),
+            opset_version=data.get("opset_version", Defaults.ONNX_OPSET_VERSION),
             use_cache=data.get("use_cache", False),
-            max_sequence_length=data.get("max_sequence_length", 512),
-            input_names=data.get("input_names", ["input_ids", "attention_mask"]),
-            output_names=data.get("output_names", ["logits"]),
+            max_sequence_length=data.get(
+                "max_sequence_length", Defaults.MAX_SEQUENCE_LENGTH
+            ),
+            input_names=data.get("input_names", ModelIO.DEFAULT_INPUTS),
+            output_names=data.get("output_names", ModelIO.DEFAULT_OUTPUTS),
             is_quantized=data.get("is_quantized", False),
             quantization_format=data.get("quantization_format"),
             activation_type=data.get("activation_type"),
@@ -160,16 +161,19 @@ class BundleArtifacts:
     """Paths to all artifacts within the bundle directory."""
 
     # Model files
-    model_onnx: str = "model.onnx"  # Main ONNX model file
-    model_original: Optional[str] = None  # Original unquantized model (if different)
+    model_onnx: str = FileNames.ONNX_MODEL
+    model_original: Optional[str] = None
 
-    # Tokenizer files
-    tokenizer_dir: str = "tokenizer"
-    tokenizer_config: str = "tokenizer/tokenizer_config.json"
-    tokenizer_json: Optional[str] = "tokenizer/tokenizer.json"  # Fast tokenizer
+    tokenizer_dir: str = FileNames.TOKENIZER_DIR
+    tokenizer_config: str = f"{FileNames.TOKENIZER_DIR}/{FileNames.TOKENIZER_CONFIG}"
+    tokenizer_json: Optional[str] = (
+        f"{FileNames.TOKENIZER_DIR}/{FileNames.TOKENIZER_JSON}"
+    )
     vocab_file: Optional[str] = None  # Traditional vocab (if used)
     merges_file: Optional[str] = None  # BPE merges (if used)
-    special_tokens_map: Optional[str] = "tokenizer/special_tokens_map.json"
+    special_tokens_map: Optional[str] = (
+        f"{FileNames.TOKENIZER_DIR}/{FileNames.TOKENIZER_SPECIAL_TOKENS}"
+    )
 
     # Optional runtime files
     runners_dir: Optional[str] = "runners"  # Directory for runtime launchers
@@ -339,5 +343,5 @@ class Bundle:
 def create_bundle_directory_structure(bundle_path: Path) -> None:
     """Create standard bundle directory structure."""
     bundle_path.mkdir(parents=True, exist_ok=True)
-    (bundle_path / "tokenizer").mkdir(exist_ok=True)
+    (bundle_path / FileNames.TOKENIZER_DIR).mkdir(exist_ok=True)
     (bundle_path / "runners").mkdir(exist_ok=True)

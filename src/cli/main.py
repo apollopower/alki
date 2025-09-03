@@ -33,6 +33,7 @@ from src.core.quantizer import (
 )
 from src.core.bundle_builder import create_bundle_from_pipeline
 from src.core.bundle_manager import BundleManager, load_bundle, discover_bundles
+from src.core.constants import Defaults, Targets, Presets
 
 # Initialize Typer app
 app = typer.Typer(
@@ -67,24 +68,24 @@ def build(
         Path("./dist"), "--output", "-o", help="Output directory for bundle"
     ),
     target: str = typer.Option(
-        "cpu",
+        Targets.CPU,
         "--target",
         "-t",
         help="Target deployment type",
-        click_type=click.Choice(["cpu", "openvino"]),
+        click_type=click.Choice([Targets.CPU, Targets.OPENVINO]),
     ),
     preset: str = typer.Option(
-        "balanced",
+        Presets.BALANCED,
         "--preset",
         "-p",
         help="Optimization preset",
-        click_type=click.Choice(["fast", "balanced", "small"]),
+        click_type=click.Choice([Presets.FAST, Presets.BALANCED, Presets.SMALL]),
     ),
     quantize: bool = typer.Option(
         True, "--quantize/--no-quantize", help="Apply SmoothQuant W8A8 quantization"
     ),
     alpha: float = typer.Option(
-        0.5,
+        Defaults.SMOOTHQUANT_ALPHA,
         "--alpha",
         "-a",
         help="SmoothQuant alpha parameter (0.0-1.0)",
@@ -135,10 +136,9 @@ def build(
         # Step 2: Export to ONNX
         console.print("\n[bold blue]Step 2:[/bold blue] Exporting to ONNX...")
 
-        # Configure ONNX export based on target
         onnx_config = OnnxExportConfig(
-            use_gpu=(target == "gpu"),  # Future GPU target support
-            use_cache=False,  # Disabled for edge deployment
+            use_gpu=(target == Targets.GPU),
+            use_cache=False,
             optimize=True,
         )
 
@@ -159,21 +159,19 @@ def build(
                     f"\n[bold blue]Step 3:[/bold blue] Applying SmoothQuant quantization (α={alpha})..."
                 )
 
-                # Configure quantization
                 quant_config = SmoothQuantConfig(
                     alpha=alpha,
-                    calibration_samples=64,  # Reduced for CLI speed
+                    calibration_samples=Defaults.CLI_CALIBRATION_SAMPLES,
                     per_channel=True,
                     symmetric=True,
                 )
 
-                # Create calibration data
                 calibration_texts = create_default_calibration_texts()
                 tokenizer = model_artifacts["tokenizer"]
                 calibration_data = CalibrationDataGenerator(
                     tokenizer,
                     calibration_texts,
-                    max_length=256,  # Shorter sequences for speed
+                    max_length=Defaults.CLI_MAX_LENGTH,
                 )
 
                 # Quantize model
@@ -193,18 +191,8 @@ def build(
                     }
                     console.print("✓ Quantization complete")
                 except Exception as e:
-                    # Provide helpful error message
-                    error_msg = str(e)
-                    if "No data is collected" in error_msg:
-                        console.print(
-                            "❌ [red]Quantization failed: No calibration data collected[/red]"
-                        )
-                        console.print(
-                            "   This may indicate an issue with the calibration data iterator."
-                        )
-                    else:
-                        console.print(f"❌ [red]Quantization failed: {error_msg}[/red]")
-                    raise RuntimeError(f"Quantization failed: {error_msg}")
+                    _handle_quantization_error(e, console)
+                    raise RuntimeError(f"Quantization failed: {str(e)}")
             else:
                 console.print(
                     "\n[bold yellow]Step 3:[/bold yellow] Skipping quantization"
@@ -398,6 +386,20 @@ def _display_bundle_info(bundle, detailed: bool = False):
         )
     else:
         console.print("✅ [green]Bundle validation passed[/green]")
+
+
+def _handle_quantization_error(error: Exception, console: Console) -> None:
+    """Handle quantization errors with helpful messages."""
+    error_msg = str(error)
+    if "No data is collected" in error_msg:
+        console.print(
+            "❌ [red]Quantization failed: No calibration data collected[/red]"
+        )
+        console.print(
+            "   This may indicate an issue with the calibration data iterator."
+        )
+    else:
+        console.print(f"❌ [red]Quantization failed: {error_msg}[/red]")
 
 
 if __name__ == "__main__":

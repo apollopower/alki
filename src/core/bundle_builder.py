@@ -24,6 +24,14 @@ from .bundle import (
     BundleArtifacts,
     create_bundle_directory_structure,
 )
+from .constants import (
+    FileNames,
+    ExecutionProviders,
+    QuantizationMethods,
+    QuantizationFormats,
+    Targets,
+    FileSizes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +106,7 @@ class BundleBuilder:
             bundle_path=output_path,
         )
 
-        # Save bundle.yaml manifest
-        bundle_yaml_path = output_path / "bundle.yaml"
+        bundle_yaml_path = output_path / FileNames.BUNDLE_MANIFEST
         bundle.save_yaml(bundle_yaml_path)
 
         logger.info(f"✓ Bundle created successfully at: {output_path}")
@@ -120,32 +127,9 @@ class BundleBuilder:
     ) -> BundleMetadata:
         """Create bundle metadata from pipeline artifacts."""
 
-        # Calculate size information
-        original_size_mb = None
-        quantized_size_mb = None
-        compression_ratio = None
+        size_info = self._calculate_size_info(onnx_artifacts, quantization_artifacts)
 
-        if "onnx_path" in onnx_artifacts:
-            onnx_path = Path(onnx_artifacts["onnx_path"])
-            if onnx_path.exists():
-                original_size_mb = onnx_path.stat().st_size // (1024 * 1024)
-
-        if quantization_artifacts and "quantized_model_path" in quantization_artifacts:
-            quant_path = Path(quantization_artifacts["quantized_model_path"])
-            if quant_path.exists():
-                quantized_size_mb = quant_path.stat().st_size // (1024 * 1024)
-                if original_size_mb and original_size_mb > 0:
-                    compression_ratio = quantized_size_mb / original_size_mb
-
-        # Extract quantization details
-        quantization_method = None
-        quantization_alpha = None
-        if quantization_artifacts:
-            if "config" in quantization_artifacts:
-                config = quantization_artifacts["config"]
-                quantization_method = "SmoothQuant W8A8"
-                if hasattr(config, "alpha"):
-                    quantization_alpha = config.alpha
+        quant_info = self._extract_quantization_info(quantization_artifacts)
 
         return BundleMetadata(
             model_id=model_artifacts["model_id"],
@@ -154,11 +138,8 @@ class BundleBuilder:
             created_at=datetime.now(),
             target=target,
             preset=preset,
-            original_size_mb=original_size_mb,
-            quantized_size_mb=quantized_size_mb,
-            compression_ratio=compression_ratio,
-            quantization_method=quantization_method,
-            quantization_alpha=quantization_alpha,
+            **size_info,
+            **quant_info,
         )
 
     def _create_runtime_config(
@@ -172,60 +153,16 @@ class BundleBuilder:
         # Extract configuration from ONNX export
         export_config = onnx_artifacts.get("export_config")
 
-        # Determine execution provider based on target
-        provider = "CPUExecutionProvider"
-        if target == "openvino":
-            provider = "OpenVINOExecutionProvider"
-        elif (
-            export_config
-            and hasattr(export_config, "use_gpu")
-            and export_config.use_gpu
-        ):
-            provider = "CUDAExecutionProvider"
+        provider = self._determine_execution_provider(target, export_config)
 
-        # Extract ONNX model info
-        opset_version = 14
-        use_cache = False
-        input_names = ["input_ids", "attention_mask"]
-        output_names = ["logits"]
+        model_info = self._extract_model_info(export_config, onnx_artifacts)
 
-        if export_config:
-            if hasattr(export_config, "opset_version"):
-                opset_version = export_config.opset_version
-            if hasattr(export_config, "use_cache"):
-                use_cache = export_config.use_cache
-
-        # Try to extract actual input/output names from ONNX model
-        if "onnx_model" in onnx_artifacts:
-            try:
-                onnx_model = onnx_artifacts["onnx_model"]
-                if hasattr(onnx_model, "graph"):
-                    input_names = [inp.name for inp in onnx_model.graph.input]
-                    output_names = [out.name for out in onnx_model.graph.output]
-            except Exception as e:
-                logger.debug(f"Could not extract I/O names from ONNX model: {e}")
-
-        # Quantization information
-        is_quantized = quantization_artifacts is not None
-        quantization_format = None
-        activation_type = None
-        weight_type = None
-
-        if quantization_artifacts and "config" in quantization_artifacts:
-            quantization_format = "QDQ"  # SmoothQuantizer uses QDQ format
-            activation_type = "QInt8"  # Default for SmoothQuant
-            weight_type = "QInt8"
+        quant_config = self._get_quantization_config(quantization_artifacts)
 
         return RuntimeConfig(
             provider=provider,
-            opset_version=opset_version,
-            use_cache=use_cache,
-            input_names=input_names,
-            output_names=output_names,
-            is_quantized=is_quantized,
-            quantization_format=quantization_format,
-            activation_type=activation_type,
-            weight_type=weight_type,
+            **model_info,
+            **quant_config,
         )
 
     def _organize_artifacts(
@@ -237,9 +174,8 @@ class BundleBuilder:
     ) -> BundleArtifacts:
         """Copy and organize all artifacts into bundle directory structure."""
 
-        # Copy main ONNX model (quantized if available, otherwise original)
         model_source_path = None
-        model_dest_path = bundle_path / "model.onnx"
+        model_dest_path = bundle_path / FileNames.ONNX_MODEL
 
         if quantization_artifacts and "quantized_model_path" in quantization_artifacts:
             # Use quantized model as main model
@@ -257,24 +193,22 @@ class BundleBuilder:
         # Copy tokenizer files
         self._copy_tokenizer_artifacts(model_artifacts, bundle_path)
 
-        # Create artifact references
         artifacts = BundleArtifacts(
-            model_onnx="model.onnx",
-            tokenizer_dir="tokenizer",
-            tokenizer_config="tokenizer/tokenizer_config.json",
-            tokenizer_json="tokenizer/tokenizer.json",
-            special_tokens_map="tokenizer/special_tokens_map.json",
+            model_onnx=FileNames.ONNX_MODEL,
+            tokenizer_dir=FileNames.TOKENIZER_DIR,
+            tokenizer_config=f"{FileNames.TOKENIZER_DIR}/{FileNames.TOKENIZER_CONFIG}",
+            tokenizer_json=f"{FileNames.TOKENIZER_DIR}/{FileNames.TOKENIZER_JSON}",
+            special_tokens_map=f"{FileNames.TOKENIZER_DIR}/{FileNames.TOKENIZER_SPECIAL_TOKENS}",
         )
 
-        # Keep original model if we used quantized version
         if (
             quantization_artifacts
             and "quantized_model_path" in quantization_artifacts
             and "onnx_path" in onnx_artifacts
         ):
-            original_path = bundle_path / "model_original.onnx"
+            original_path = bundle_path / FileNames.ONNX_MODEL_ORIGINAL
             shutil.copy2(Path(onnx_artifacts["onnx_path"]), original_path)
-            artifacts.model_original = "model_original.onnx"
+            artifacts.model_original = FileNames.ONNX_MODEL_ORIGINAL
 
         return artifacts
 
@@ -283,7 +217,7 @@ class BundleBuilder:
     ) -> None:
         """Copy tokenizer files to bundle tokenizer directory."""
 
-        tokenizer_dest_dir = bundle_path / "tokenizer"
+        tokenizer_dest_dir = bundle_path / FileNames.TOKENIZER_DIR
         tokenizer_dest_dir.mkdir(exist_ok=True)
 
         # Get tokenizer from model artifacts
@@ -300,14 +234,13 @@ class BundleBuilder:
 
         tokenizer_source_dir = Path(local_path)
 
-        # List of tokenizer files to copy (if they exist)
         tokenizer_files = [
-            "tokenizer_config.json",
-            "tokenizer.json",  # Fast tokenizer
-            "vocab.json",  # Vocabulary
-            "merges.txt",  # BPE merges
-            "special_tokens_map.json",
-            "vocab.txt",  # Alternative vocab format
+            FileNames.TOKENIZER_CONFIG,
+            FileNames.TOKENIZER_JSON,
+            FileNames.TOKENIZER_VOCAB,
+            FileNames.TOKENIZER_MERGES,
+            FileNames.TOKENIZER_SPECIAL_TOKENS,
+            FileNames.TOKENIZER_VOCAB_TXT,
         ]
 
         copied_files = []
@@ -362,6 +295,119 @@ class BundleBuilder:
                 logger.warning(f"    - {issue}")
         else:
             logger.info("  Bundle validation: ✓ Passed")
+
+    def _calculate_size_info(
+        self,
+        onnx_artifacts: Dict[str, Any],
+        quantization_artifacts: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Calculate model size information."""
+        original_size_mb = None
+        quantized_size_mb = None
+        compression_ratio = None
+
+        if "onnx_path" in onnx_artifacts:
+            onnx_path = Path(onnx_artifacts["onnx_path"])
+            if onnx_path.exists():
+                original_size_mb = onnx_path.stat().st_size // FileSizes.MB
+
+        if quantization_artifacts and "quantized_model_path" in quantization_artifacts:
+            quant_path = Path(quantization_artifacts["quantized_model_path"])
+            if quant_path.exists():
+                quantized_size_mb = quant_path.stat().st_size // FileSizes.MB
+                if original_size_mb and original_size_mb > 0:
+                    compression_ratio = quantized_size_mb / original_size_mb
+
+        return {
+            "original_size_mb": original_size_mb,
+            "quantized_size_mb": quantized_size_mb,
+            "compression_ratio": compression_ratio,
+        }
+
+    def _extract_quantization_info(
+        self, quantization_artifacts: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Extract quantization method and parameters."""
+        quantization_method = None
+        quantization_alpha = None
+
+        if quantization_artifacts and "config" in quantization_artifacts:
+            config = quantization_artifacts["config"]
+            quantization_method = QuantizationMethods.SMOOTHQUANT_W8A8
+            if hasattr(config, "alpha"):
+                quantization_alpha = config.alpha
+
+        return {
+            "quantization_method": quantization_method,
+            "quantization_alpha": quantization_alpha,
+        }
+
+    def _determine_execution_provider(self, target: str, export_config) -> str:
+        """Determine the appropriate execution provider for the target."""
+        if target == Targets.OPENVINO:
+            return ExecutionProviders.OPENVINO
+        elif (
+            export_config
+            and hasattr(export_config, "use_gpu")
+            and export_config.use_gpu
+        ):
+            return ExecutionProviders.CUDA
+        else:
+            return ExecutionProviders.CPU
+
+    def _extract_model_info(
+        self, export_config, onnx_artifacts: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Extract ONNX model configuration information."""
+        from .constants import Defaults, ModelIO
+
+        opset_version = Defaults.ONNX_OPSET_VERSION
+        use_cache = False
+        input_names = ModelIO.DEFAULT_INPUTS
+        output_names = ModelIO.DEFAULT_OUTPUTS
+
+        if export_config:
+            if hasattr(export_config, "opset_version"):
+                opset_version = export_config.opset_version
+            if hasattr(export_config, "use_cache"):
+                use_cache = export_config.use_cache
+
+        if "onnx_model" in onnx_artifacts:
+            try:
+                onnx_model = onnx_artifacts["onnx_model"]
+                if hasattr(onnx_model, "graph"):
+                    input_names = [inp.name for inp in onnx_model.graph.input]
+                    output_names = [out.name for out in onnx_model.graph.output]
+            except Exception as e:
+                logger.debug(f"Could not extract I/O names from ONNX model: {e}")
+
+        return {
+            "opset_version": opset_version,
+            "use_cache": use_cache,
+            "input_names": input_names,
+            "output_names": output_names,
+        }
+
+    def _get_quantization_config(
+        self, quantization_artifacts: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Get quantization configuration for runtime."""
+        is_quantized = quantization_artifacts is not None
+        quantization_format = None
+        activation_type = None
+        weight_type = None
+
+        if quantization_artifacts and "config" in quantization_artifacts:
+            quantization_format = QuantizationFormats.QDQ
+            activation_type = QuantizationFormats.QINT8
+            weight_type = QuantizationFormats.QINT8
+
+        return {
+            "is_quantized": is_quantized,
+            "quantization_format": quantization_format,
+            "activation_type": activation_type,
+            "weight_type": weight_type,
+        }
 
 
 def create_bundle_from_pipeline(
