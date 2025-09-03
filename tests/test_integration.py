@@ -17,6 +17,9 @@ def mock_all_dependencies():
         patch("src.core.model_loader.snapshot_download") as mock_download,
         patch("src.core.model_loader.AutoConfig.from_pretrained") as mock_config,
         patch("src.core.model_loader.AutoTokenizer.from_pretrained") as mock_tokenizer,
+        patch(
+            "src.core.model_loader.HuggingFaceModelLoader._estimate_model_size_mb"
+        ) as mock_size_est,
         # ONNX mocks
         patch("src.core.onnx_exporter.ORTModelForCausalLM") as mock_ort_model,
         patch("src.core.onnx_exporter.onnx") as mock_onnx,
@@ -30,6 +33,9 @@ def mock_all_dependencies():
         mock_config.return_value = config_obj
 
         mock_tokenizer.return_value = MagicMock()
+
+        # Mock size estimation to return a valid float
+        mock_size_est.return_value = 500.0  # 500MB for test model
 
         # Setup ONNX mocks
         mock_model_instance = MagicMock()
@@ -45,6 +51,7 @@ def mock_all_dependencies():
             "config": mock_config,
             "tokenizer": mock_tokenizer,
             "config_obj": config_obj,
+            "size_estimate": mock_size_est,
             # ONNX mocks
             "ort_model_class": mock_ort_model,
             "ort_model_instance": mock_model_instance,
@@ -143,7 +150,10 @@ def test_pipeline_with_custom_config(mock_all_dependencies):
         mock_all_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
-            "gpt2", export=True, use_cache=False, provider="CUDAExecutionProvider"
+            model_id="gpt2",
+            export=True,
+            use_cache=False,
+            provider="CUDAExecutionProvider",
         )
 
 

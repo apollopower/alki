@@ -53,7 +53,7 @@ def format_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} TB"
 
 
-def test_quantization_pipeline(model_id="gpt2", max_length=128, calibration_samples=32, skip_configs=False):
+def test_quantization_pipeline(model_id="gpt2", max_length=128, calibration_samples=32, skip_configs=False, low_memory=False):
     """Run full quantization pipeline test."""
     
     print("\n" + "="*80)
@@ -77,7 +77,10 @@ def test_quantization_pipeline(model_id="gpt2", max_length=128, calibration_samp
         
         # Step 2: Export to ONNX
         print("Step 2: Exporting to ONNX format...")
-        exporter = OnnxExporter(OnnxExportConfig(optimize=True))
+        onnx_config = OnnxExportConfig(optimize=True, low_memory=low_memory)
+        if low_memory:
+            print("   🧠 Using low memory mode for export")
+        exporter = OnnxExporter(onnx_config)
         onnx_dir = work_dir / "onnx"
         
         start_time = time.time()
@@ -263,6 +266,11 @@ if __name__ == "__main__":
         action="store_true", 
         help="Test only balanced config instead of all three (faster)"
     )
+    parser.add_argument(
+        "--low-memory", 
+        action="store_true", 
+        help="Enable low memory mode for large model processing"
+    )
     
     args = parser.parse_args()
     
@@ -271,7 +279,8 @@ if __name__ == "__main__":
             model_id=args.model,
             max_length=args.max_length,
             calibration_samples=args.calibration_samples,
-            skip_configs=args.skip_configs
+            skip_configs=args.skip_configs,
+            low_memory=args.low_memory
         )
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:

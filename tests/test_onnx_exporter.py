@@ -86,11 +86,14 @@ def test_export_successful_cpu(mock_onnx_dependencies, mock_model_artifacts):
         assert "onnx_model" in result
         assert "export_config" in result
 
-        # Verify method calls
+        # Verify method calls (parameters are now passed as keyword arguments)
         mock_onnx_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
-            "gpt2", export=True, use_cache=False, provider="CPUExecutionProvider"
+            model_id="gpt2",
+            export=True,
+            use_cache=False,
+            provider="CPUExecutionProvider",
         )
 
         # Verify output directory was created
@@ -120,7 +123,10 @@ def test_export_successful_gpu(mock_onnx_dependencies, mock_model_artifacts):
         mock_onnx_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
-            "gpt2", export=True, use_cache=False, provider="CUDAExecutionProvider"
+            model_id="gpt2",
+            export=True,
+            use_cache=False,
+            provider="CUDAExecutionProvider",
         )
 
 
@@ -216,3 +222,72 @@ def test_exporter_with_custom_config(mock_onnx_dependencies, mock_model_artifact
         assert result["export_config"] == custom_config
         assert result["export_config"].opset_version == 16
         assert result["export_config"].use_gpu is True
+
+
+def test_export_with_low_memory_mode(mock_onnx_dependencies, mock_model_artifacts):
+    """Test ONNX export with low memory mode enabled."""
+    # Configure for low memory mode
+    config = OnnxExportConfig(low_memory=True, memory_threshold_mb=2000.0)
+
+    with patch("src.core.onnx_exporter.MemoryManager") as mock_memory_manager_class:
+        # Setup mock memory manager
+        mock_memory_manager = mock_memory_manager_class.return_value
+        mock_memory_manager.get_memory_info.return_value = {
+            "available_mb": 4000.0,
+            "used_pct": 60.0,
+            "total_mb": 8000.0,
+        }
+        mock_memory_manager.check_memory_threshold.return_value = (True, "Memory OK")
+
+        exporter = OnnxExporter(config)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "onnx_output"
+
+            # Add size_mb to mock artifacts
+            mock_model_artifacts["size_mb"] = 1000.0
+
+            result = exporter.export(mock_model_artifacts, output_path)
+
+            # Verify low memory mode was activated
+            mock_memory_manager.set_low_memory_mode.assert_called_once()
+            # Garbage collection should be called at least once (pre-export + context manager)
+            assert mock_memory_manager.force_garbage_collection.call_count >= 1
+
+            # Verify export still succeeded
+            assert result["model_id"] == "gpt2"
+
+
+def test_export_fails_gracefully_when_memory_insufficient(
+    mock_onnx_dependencies, mock_model_artifacts
+):
+    """Test graceful failure when insufficient memory is detected."""
+    config = OnnxExportConfig(low_memory=True)
+
+    with patch("src.core.onnx_exporter.MemoryManager") as mock_memory_manager_class:
+        # Setup mock memory manager with insufficient memory
+        mock_memory_manager = mock_memory_manager_class.return_value
+        mock_memory_manager.get_memory_info.return_value = {
+            "available_mb": 2000.0,  # Only 2GB available
+            "used_pct": 75.0,
+            "total_mb": 8000.0,
+        }
+
+        exporter = OnnxExporter(config)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "onnx_output"
+
+            # Mock large model requiring more memory than available
+            mock_model_artifacts["size_mb"] = (
+                2200.0  # TinyLlama size (~6.6GB requirement)
+            )
+
+            with pytest.raises(RuntimeError) as exc_info:
+                exporter.export(mock_model_artifacts, output_path)
+
+            error_message = str(exc_info.value)
+            assert "Model too large for available memory" in error_message
+            assert "Estimated requirement: 6600.0MB" in error_message
+            assert "Available memory: 2000.0MB" in error_message
+            assert "Try a smaller model" in error_message
