@@ -144,13 +144,23 @@ class OnnxExporter:
             "t5",
             "bart",
             "llama",
+            "tinyllama",  # TinyLlama uses LlamaForCausalLM, native Optimum support
             "mistral",
             "codegen",
             "falcon",
+            "phi",  # Microsoft Phi models, native Optimum support
+            "stablelm",  # StableLM models, native Optimum support
+            "gemma",  # Google Gemma models, native Optimum support
         ]
 
         # Known problematic architectures
-        unsupported = ["mamba", "mixtral", "phi3", "qwen2", "gemma"]
+        unsupported = [
+            "mamba",
+            "mixtral",
+            "phi3",
+            "qwen2",
+            "qwen3",
+        ]  # Keep phi3 as unsupported, phi (without 3) is supported
 
         arch_lower = architecture.lower()
 
