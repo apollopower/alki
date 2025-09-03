@@ -61,22 +61,26 @@ python -m src.cli.main list --path dist --verbose
 
 ## 🤖 Supported Models
 
-### Currently Tested & Validated
-* **GPT-2** (all sizes) - Reference implementation and testing
-
-### Priority Models (Compatible, In Development)
-* **Qwen3-0.6B** ⭐ - **Recommended for edge deployment** (latest generation, compact)
-* **Qwen2.5-0.5B** - Proven edge performance
-* **TinyLlama-1.1B** - Popular lightweight option
+### Currently Supported (Native Optimum ONNX Export)
+* **GPT-2** (all sizes) - Reference implementation, fully tested ✅
+* **microsoft/DialoGPT-small** - Tested and working ✅
+* **TinyLlama-1.1B** - Popular lightweight option (memory constraints may apply)
 * **Phi-2 (2.7B)** - Microsoft's efficient edge model
-* **Phi-3.5-mini** - Latest Phi generation
+* **StableLM models** - Stability AI variants
+* **Gemma models** - Google's open models (may require access)
+* **Llama family** - Includes all LlamaForCausalLM variants
+* **Mistral family** - Full-size models for testing
 
-### Experimental Support
-* **Mistral-7B** - Full-size model for testing
-* **Gemma models** - Google's open models
-* **StableLM variants** - Stability AI models
+### Future Models (Require Custom ONNX Configuration)
+* **Qwen3-0.6B** - Needs custom ONNX config + high memory (>4GB)
+* **Qwen2.5-0.5B** - Needs custom ONNX config development
+* **Phi-3.5-mini** - Not currently supported (different from Phi-2)
 
-**Note**: All models listed use architectures supported by Optimum's ONNX export. Additional models may work but haven't been validated. See [ROADMAP.md](ROADMAP.md) for expansion plans.
+### Known Incompatible
+* **Mamba models** - Architecture not supported by ONNX export
+* **Mixtral models** - Architecture not supported by ONNX export
+
+**Note**: Models in "Currently Supported" use native Optimum ONNX export and should work out-of-the-box. "Future Models" require additional development work. Memory constraints may affect larger models on resource-limited systems. See [ROADMAP.md](ROADMAP.md) for detailed expansion plans.
 
 ## 📦 Bundle Layout
 

@@ -28,9 +28,9 @@ This document tracks the development priorities and implementation plan for Alki
 **Problem**: Currently only GPT-2 is validated, but many better edge models exist.
 
 **Tasks**:
-- [ ] Update `src/core/onnx_exporter.py` architecture validation list
-- [ ] Add TinyLlama, Phi, StableLM, Gemma to supported architectures
-- [ ] Test end-to-end pipeline with TinyLlama-1.1B
+- [x] Update `src/core/onnx_exporter.py` architecture validation list
+- [x] Add TinyLlama, Phi, StableLM, Gemma to supported architectures  
+- [ ] Test end-to-end pipeline with TinyLlama-1.1B (memory constraints identified)
 - [ ] Create model-specific optimization presets
 - [ ] Document model-specific quirks and settings
 
