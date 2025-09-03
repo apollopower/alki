@@ -5,6 +5,13 @@ from typing import Dict, Any, Optional
 import onnx
 from optimum.onnxruntime import ORTModelForCausalLM
 
+from .constants import (
+    Defaults,
+    ExecutionProviders,
+    SupportedArchitectures,
+    get_default_dynamic_axes,
+)
+
 
 @dataclass
 class OnnxExportConfig:
@@ -21,7 +28,7 @@ class OnnxExportConfig:
         dynamic_axes: Axes that can have variable sizes at runtime
     """
 
-    opset_version: int = 14
+    opset_version: int = Defaults.ONNX_OPSET_VERSION
     use_gpu: bool = False
     optimize: bool = True
     output_dir: Optional[Path] = None
@@ -32,20 +39,7 @@ class OnnxExportConfig:
 
     def __post_init__(self):
         if self.dynamic_axes is None:
-            # Default dynamic axes for causal LM models
-            base_axes = {
-                "input_ids": {0: "batch_size", 1: "sequence_length"},
-                "attention_mask": {0: "batch_size", 1: "sequence_length"},
-            }
-
-            # Add KV cache axes only if cache is enabled
-            if self.use_cache:
-                base_axes["past_key_values"] = {
-                    0: "batch_size",
-                    2: "past_sequence_length",
-                }
-
-            self.dynamic_axes = base_axes
+            self.dynamic_axes = get_default_dynamic_axes(self.use_cache)
 
 
 class OnnxExporter:
@@ -82,9 +76,9 @@ class OnnxExporter:
                 export=True,
                 use_cache=self.config.use_cache,
                 provider=(
-                    "CPUExecutionProvider"
+                    ExecutionProviders.CPU
                     if not self.config.use_gpu
-                    else "CUDAExecutionProvider"
+                    else ExecutionProviders.CUDA
                 ),
             )
 
@@ -111,10 +105,9 @@ class OnnxExporter:
             error_msg = f"ONNX export failed for {model_id}: {str(e)}"
             print(f"✗ {error_msg}")
 
-            # Check for common unsupported architectures
             if any(
                 unsupported in architecture.lower()
-                for unsupported in ["mamba", "mixtral", "phi3", "qwen2"]
+                for unsupported in SupportedArchitectures.UNSUPPORTED
             ):
                 error_msg += f"\nNote: {architecture} may not be fully supported by optimum ONNX export."
 
@@ -130,41 +123,9 @@ class OnnxExporter:
         Returns:
             True if likely supported, False if known unsupported
         """
-        # Known supported architectures
-        supported = [
-            "gpt2",
-            "bert",
-            "distilbert",
-            "roberta",
-            "xlm-roberta",
-            "gpt-neo",
-            "gpt-j",
-            "opt",
-            "bloom",
-            "t5",
-            "bart",
-            "llama",
-            "tinyllama",  # TinyLlama uses LlamaForCausalLM, native Optimum support
-            "mistral",
-            "codegen",
-            "falcon",
-            "phi",  # Microsoft Phi models, native Optimum support
-            "stablelm",  # StableLM models, native Optimum support
-            "gemma",  # Google Gemma models, native Optimum support
-        ]
-
-        # Known problematic architectures
-        unsupported = [
-            "mamba",
-            "mixtral",
-            "phi3",
-            "qwen2",
-            "qwen3",
-        ]  # Keep phi3 as unsupported, phi (without 3) is supported
-
         arch_lower = architecture.lower()
 
-        if any(arch in arch_lower for arch in unsupported):
+        if any(arch in arch_lower for arch in SupportedArchitectures.UNSUPPORTED):
             return False
 
-        return any(arch in arch_lower for arch in supported)
+        return any(arch in arch_lower for arch in SupportedArchitectures.SUPPORTED)

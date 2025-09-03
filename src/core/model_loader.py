@@ -1,10 +1,13 @@
 from pathlib import Path
+import logging
 from huggingface_hub import snapshot_download
 from transformers import AutoConfig, AutoTokenizer
 
+logger = logging.getLogger(__name__)
+
 
 class HuggingFaceModelLoader:
-    """Downloads and prepares HF models for conversion - v1"""
+    """Downloads and prepares HuggingFace models for conversion."""
 
     def prepare(self, model_id: str) -> dict:
         """
@@ -16,21 +19,22 @@ class HuggingFaceModelLoader:
         Returns:
             Dict with model artifacts and metadata
         """
-        print(f"Downloading: {model_id}")
+        logger.info(f"Downloading: {model_id}")
 
-        # Download to HF cache (no memory load)
         local_path = snapshot_download(repo_id=model_id)
-
-        # Load just config and tokenizer (lightweight)
         config = AutoConfig.from_pretrained(model_id)
         tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+        logger.info(
+            f"Loaded {config.architectures[0] if config.architectures else 'unknown'} model"
+        )
+
+        architecture = config.architectures[0] if config.architectures else "unknown"
 
         return {
             "model_id": model_id,
             "local_path": Path(local_path),
             "config": config,
             "tokenizer": tokenizer,
-            "architecture": (
-                config.architectures[0] if config.architectures else "unknown"
-            ),
+            "architecture": architecture,
         }
