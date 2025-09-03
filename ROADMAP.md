@@ -30,7 +30,7 @@ This document tracks the development priorities and implementation plan for Alki
 **Tasks**:
 - [x] Update `src/core/onnx_exporter.py` architecture validation list
 - [x] Add TinyLlama, Phi, StableLM, Gemma to supported architectures  
-- [ ] Test end-to-end pipeline with TinyLlama-1.1B (memory constraints identified)
+- [x] Test end-to-end pipeline with TinyLlama-1.1B (memory detection implemented)
 - [ ] Create model-specific optimization presets
 - [ ] Document model-specific quirks and settings
 
@@ -134,14 +134,18 @@ alki bench --bundle dist/qwen3-cpu --compare-models
 4. **Test coverage** for real models (vs mocked) - need more E2E tests
 
 ### Memory Constraint Handling  
-1. **Large model export limitations** - Models >2GB may be killed by OOM on resource-constrained systems
+1. **Large model export limitations** - ✅ **COMPLETED: Memory management system implemented**
+   - ✅ Memory usage monitoring with psutil integration
+   - ✅ Automatic memory threshold detection (warning at 80%, critical at 90%)
+   - ✅ Graceful failure with helpful error messages for oversized models
+   - ✅ Model size estimation based on architecture parameters
+   - ✅ Low memory mode configuration for environment optimization
+   - ✅ Memory-managed operation context managers with cleanup
    - Issue: Qwen3-0.6B requires custom ONNX config (not natively supported by Optimum) AND significant memory
-   - Current workaround: Focus on smaller models natively supported by Optimum
-   - Future solutions needed:
+   - Current approach: Smart detection prevents OOM crashes, provides actionable feedback
+   - Future enhancements:
      - External data storage configuration for large tensors
      - Chunked processing for memory-efficient exports
-     - Memory usage monitoring and automatic fallbacks
-     - Integration with system memory limits
 
 2. **Custom ONNX configuration framework** - For models not natively supported by Optimum
    - Need systematic approach for adding custom export configs

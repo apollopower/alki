@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, Optional
+import logging
 
 import onnx
 from optimum.onnxruntime import ORTModelForCausalLM
@@ -11,6 +12,13 @@ from .constants import (
     SupportedArchitectures,
     get_default_dynamic_axes,
 )
+from .memory_manager import (
+    MemoryManager,
+    memory_managed_operation,
+    estimate_model_memory_mb,
+)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -25,6 +33,8 @@ class OnnxExportConfig:
         use_cache: Whether to enable KV cache in exported model.
                    False is recommended for quantization and edge deployment
                    as it simplifies the model and reduces memory overhead.
+        low_memory: Whether to use memory optimization strategies
+        memory_threshold_mb: Memory threshold in MB for low memory mode
         dynamic_axes: Axes that can have variable sizes at runtime
     """
 
@@ -33,6 +43,8 @@ class OnnxExportConfig:
     optimize: bool = True
     output_dir: Optional[Path] = None
     use_cache: bool = False  # Disabled by default for edge deployment
+    low_memory: bool = False  # Enable memory optimization strategies
+    memory_threshold_mb: float = 6000.0  # Threshold for enabling low memory mode
 
     # Dynamic axes for variable sequence lengths
     dynamic_axes: Dict[str, Dict[int, str]] = None
@@ -45,8 +57,13 @@ class OnnxExportConfig:
 class OnnxExporter:
     """Exports HuggingFace models to ONNX format."""
 
-    def __init__(self, config: Optional[OnnxExportConfig] = None):
+    def __init__(
+        self,
+        config: Optional[OnnxExportConfig] = None,
+        memory_manager: Optional[MemoryManager] = None,
+    ):
         self.config = config or OnnxExportConfig()
+        self.memory_manager = memory_manager or MemoryManager()
 
     def export(
         self, model_artifacts: Dict[str, Any], output_path: Path
@@ -69,18 +86,71 @@ class OnnxExporter:
         # Ensure output directory exists
         output_path.mkdir(parents=True, exist_ok=True)
 
-        try:
-            # Use optimum for ONNX export - handles most transformer architectures
-            ort_model = ORTModelForCausalLM.from_pretrained(
-                model_id,
-                export=True,
-                use_cache=self.config.use_cache,
-                provider=(
-                    ExecutionProviders.CPU
-                    if not self.config.use_gpu
-                    else ExecutionProviders.CUDA
-                ),
+        # Check memory requirements before attempting export
+        memory_info = self.memory_manager.get_memory_info()
+        available_mb = memory_info["available_mb"]
+
+        # Estimate model requirements - for 1.1B models (~2.2GB), we need ~6-8GB for ONNX export
+        model_size_mb = model_artifacts.get("size_mb", 1000.0)
+        estimated_memory_mb = estimate_model_memory_mb(model_size_mb)
+
+        # Hard memory limit check - if we clearly don't have enough, fail early
+        if (
+            available_mb > 0 and estimated_memory_mb > available_mb * 1.2
+        ):  # Allow some overhead
+            raise RuntimeError(
+                f"Model too large for available memory:\n"
+                f"  • Estimated requirement: {estimated_memory_mb:.1f}MB\n"
+                f"  • Available memory: {available_mb:.1f}MB\n"
+                f"  • Model: {model_id}\n\n"
+                f"💡 Suggestions:\n"
+                f"  • Try a smaller model (e.g., distilgpt2, gpt2)\n"
+                f"  • Increase system memory\n"
+                f"  • Use a cloud instance with more RAM"
             )
+
+        # Enable low memory mode if configured or if estimated memory exceeds threshold
+        use_low_memory = self.config.low_memory
+        if not use_low_memory and estimated_memory_mb > self.config.memory_threshold_mb:
+            use_low_memory = True
+            logger.info(
+                f"Auto-enabling low memory mode: estimated {estimated_memory_mb:.1f}MB > threshold {self.config.memory_threshold_mb}MB"
+            )
+
+        if use_low_memory:
+            self.memory_manager.set_low_memory_mode()
+            # Aggressive pre-export cleanup
+            self.memory_manager.force_garbage_collection()
+
+            # Final memory check after cleanup
+            memory_info = self.memory_manager.get_memory_info()
+            is_safe, message = self.memory_manager.check_memory_threshold(
+                estimated_memory_mb * 0.7
+            )  # Use 70% of estimate as buffer
+            if not is_safe:
+                logger.warning(f"Proceeding with risky memory situation: {message}")
+
+        try:
+            with memory_managed_operation(
+                self.memory_manager, f"ONNX export of {model_id}", estimated_memory_mb
+            ):
+                # Prepare export parameters
+                export_kwargs = {
+                    "model_id": model_id,
+                    "export": True,
+                    "use_cache": self.config.use_cache,
+                    "provider": (
+                        ExecutionProviders.CPU
+                        if not self.config.use_gpu
+                        else ExecutionProviders.CUDA
+                    ),
+                }
+
+                # Note: low_cpu_mem_usage not supported by optimum ONNX export
+                # Memory management handled via garbage collection and environment settings
+
+                # Use optimum for ONNX export - handles most transformer architectures
+                ort_model = ORTModelForCausalLM.from_pretrained(**export_kwargs)
 
             # Save the ONNX model
             onnx_path = output_path / "model.onnx"

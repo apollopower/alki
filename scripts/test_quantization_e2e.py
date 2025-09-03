@@ -22,6 +22,7 @@ from pathlib import Path
 import tempfile
 import time
 import logging
+import argparse
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -52,7 +53,7 @@ def format_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} TB"
 
 
-def test_quantization_pipeline():
+def test_quantization_pipeline(model_id="gpt2", max_length=128, calibration_samples=32, skip_configs=False, low_memory=False):
     """Run full quantization pipeline test."""
     
     print("\n" + "="*80)
@@ -60,11 +61,9 @@ def test_quantization_pipeline():
     print("="*80 + "\n")
     
     # Test configuration
-    # Using GPT-2 as it's small (124M params) but realistic
-    model_id = "gpt2"
-    
     print(f"📦 Test Model: {model_id}")
-    print("   (Using GPT-2 as it's small enough for quick testing)\n")
+    print(f"📋 Parameters: max_length={max_length}, calibration_samples={calibration_samples}")
+    print(f"⚙️  Config mode: {'Single config' if skip_configs else 'All configs'}\n")
     
     with tempfile.TemporaryDirectory() as tmpdir:
         work_dir = Path(tmpdir)
@@ -78,7 +77,10 @@ def test_quantization_pipeline():
         
         # Step 2: Export to ONNX
         print("Step 2: Exporting to ONNX format...")
-        exporter = OnnxExporter(OnnxExportConfig(optimize=True))
+        onnx_config = OnnxExportConfig(optimize=True, low_memory=low_memory)
+        if low_memory:
+            print("   🧠 Using low memory mode for export")
+        exporter = OnnxExporter(onnx_config)
         onnx_dir = work_dir / "onnx"
         
         start_time = time.time()
@@ -107,18 +109,23 @@ def test_quantization_pipeline():
         calibration_data = CalibrationDataGenerator(
             tokenizer=tokenizer,
             texts=calibration_texts,
-            max_length=128  # Shorter sequences for faster testing
+            max_length=max_length
         )
         print(f"   ✓ Created {len(calibration_texts)} calibration samples\n")
         
         # Step 4: Test different quantization configurations
         print("Step 4: Testing quantization configurations...\n")
         
-        configs = [
-            ("Baseline (α=0.0)", SmoothQuantConfig(alpha=0.0, calibration_samples=32)),
-            ("Balanced (α=0.5)", SmoothQuantConfig(alpha=0.5, calibration_samples=32)),
-            ("Maximum (α=1.0)", SmoothQuantConfig(alpha=1.0, calibration_samples=32)),
-        ]
+        if skip_configs:
+            configs = [
+                ("Balanced (α=0.5)", SmoothQuantConfig(alpha=0.5, calibration_samples=calibration_samples)),
+            ]
+        else:
+            configs = [
+                ("Baseline (α=0.0)", SmoothQuantConfig(alpha=0.0, calibration_samples=calibration_samples)),
+                ("Balanced (α=0.5)", SmoothQuantConfig(alpha=0.5, calibration_samples=calibration_samples)),
+                ("Maximum (α=1.0)", SmoothQuantConfig(alpha=1.0, calibration_samples=calibration_samples)),
+            ]
         
         results = []
         
@@ -236,8 +243,45 @@ def test_quantization_pipeline():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Test SmoothQuant quantization pipeline with configurable models")
+    parser.add_argument(
+        "--model", 
+        default="gpt2", 
+        help="HuggingFace model ID to test (default: gpt2)"
+    )
+    parser.add_argument(
+        "--max-length", 
+        type=int, 
+        default=128, 
+        help="Maximum sequence length for calibration (default: 128)"
+    )
+    parser.add_argument(
+        "--calibration-samples", 
+        type=int, 
+        default=32, 
+        help="Number of calibration samples to use (default: 32)"
+    )
+    parser.add_argument(
+        "--skip-configs", 
+        action="store_true", 
+        help="Test only balanced config instead of all three (faster)"
+    )
+    parser.add_argument(
+        "--low-memory", 
+        action="store_true", 
+        help="Enable low memory mode for large model processing"
+    )
+    
+    args = parser.parse_args()
+    
     try:
-        success = test_quantization_pipeline()
+        success = test_quantization_pipeline(
+            model_id=args.model,
+            max_length=args.max_length,
+            calibration_samples=args.calibration_samples,
+            skip_configs=args.skip_configs,
+            low_memory=args.low_memory
+        )
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
         print("\n\nTest interrupted by user.")

@@ -30,6 +30,9 @@ class TestBundleIntegration:
             patch(
                 "src.core.model_loader.AutoTokenizer.from_pretrained"
             ) as mock_tokenizer,
+            patch(
+                "src.core.model_loader.HuggingFaceModelLoader._estimate_model_size_mb"
+            ) as mock_size_est,
             # ONNX mocks
             patch("src.core.onnx_exporter.ORTModelForCausalLM") as mock_ort_model,
             patch("src.core.onnx_exporter.onnx") as mock_onnx,
@@ -52,6 +55,9 @@ class TestBundleIntegration:
             # Use common mock tokenizer helper
             tokenizer_obj = create_mock_tokenizer()
             mock_tokenizer.return_value = tokenizer_obj
+
+            # Mock size estimation to return a valid float
+            mock_size_est.return_value = 500.0  # 500MB for test model
 
             # Setup ONNX mocks
             mock_model_instance = MagicMock()
