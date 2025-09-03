@@ -1,6 +1,7 @@
 # General
 .venv
 *.egg-info/
+dist/
 
 # Python
 __pycache__/
