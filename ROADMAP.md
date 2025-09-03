@@ -2,7 +2,7 @@
 
 This document tracks the development priorities and implementation plan for Alki.
 
-## Current Status (December 2024)
+## Current Status (September 2025)
 
 **✅ Phase 1: Core Pipeline - MOSTLY COMPLETE**
 - [x] Model ingestion (HuggingFace → Local)

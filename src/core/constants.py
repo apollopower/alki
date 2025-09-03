@@ -42,6 +42,12 @@ class Defaults:
     MIN_SCALE = 1e-5
     MAX_SCALE = 1e5
 
+    # Runtime generation defaults
+    RUNTIME_MAX_TOKENS = 100
+    RUNTIME_TEMPERATURE = 1.0
+    RUNTIME_TOP_P = 0.9
+    RUNTIME_TOP_K = 50
+
 
 # Model input/output names
 class ModelIO:

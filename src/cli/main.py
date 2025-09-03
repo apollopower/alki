@@ -8,6 +8,7 @@ Commands:
 - build: Create deployment bundle from HuggingFace model
 - info: Inspect existing bundles
 - list: List available bundles in directory
+- run: Execute inference on a deployed bundle
 """
 
 import sys
@@ -33,6 +34,7 @@ from src.core.quantizer import (
 )
 from src.core.bundle_builder import create_bundle_from_pipeline
 from src.core.bundle_manager import BundleManager, load_bundle, discover_bundles
+from src.core.onnx_runtime import OnnxRuntimeRunner, GenerationConfig
 from src.core.constants import Defaults, Targets, Presets
 
 # Initialize Typer app
@@ -336,6 +338,126 @@ def list(
 
     except Exception as e:
         console.print(f"[bold red]❌ Failed to list bundles:[/bold red] {str(e)}")
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+@app.command()
+def run(
+    bundle_path: Path = typer.Argument(..., help="Path to bundle directory"),
+    prompt: str = typer.Option(
+        "Hello, I am", "--prompt", "-p", help="Input text prompt for generation"
+    ),
+    max_tokens: int = typer.Option(
+        Defaults.RUNTIME_MAX_TOKENS,
+        "--max-tokens",
+        "-m",
+        help="Maximum number of tokens to generate",
+        min=1,
+        max=2048,
+    ),
+    temperature: float = typer.Option(
+        Defaults.RUNTIME_TEMPERATURE,
+        "--temperature",
+        "-t",
+        help="Sampling temperature (0.1-2.0)",
+        min=0.1,
+        max=2.0,
+    ),
+    top_p: float = typer.Option(
+        Defaults.RUNTIME_TOP_P,
+        "--top-p",
+        help="Top-p sampling parameter (0.1-1.0)",
+        min=0.1,
+        max=1.0,
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose output"
+    ),
+):
+    """
+    Run inference on a deployed bundle.
+
+    Execute text generation using a previously built and quantized model bundle.
+    The bundle must contain a valid ONNX model and tokenizer configuration.
+    """
+    setup_logging(verbose)
+
+    console.print(
+        Panel(
+            f"🚀 Running inference on bundle\n"
+            f"Bundle: [bold cyan]{bundle_path}[/bold cyan]\n"
+            f"Prompt: [bold green]'{prompt}'[/bold green]\n"
+            f"Max tokens: [bold yellow]{max_tokens}[/bold yellow]\n"
+            f"Temperature: [bold magenta]{temperature}[/bold magenta]",
+            title="🌊 Alki Run",
+            border_style="blue",
+        )
+    )
+
+    try:
+        # Step 1: Load bundle
+        console.print("\n[bold blue]Step 1:[/bold blue] Loading bundle...")
+        bundle = load_bundle(bundle_path)
+        console.print(f"✓ Loaded bundle: {bundle.metadata.model_id}")
+
+        # Display bundle info if verbose
+        if verbose:
+            _display_bundle_info(bundle)
+
+        # Step 2: Initialize runtime
+        console.print("\n[bold blue]Step 2:[/bold blue] Initializing runtime...")
+        runner = OnnxRuntimeRunner(bundle)
+
+        # Check compatibility
+        compatibility = runner.validate_compatibility()
+        if not compatibility["compatible"]:
+            for issue in compatibility["issues"]:
+                console.print(f"❌ [red]Compatibility issue: {issue}[/red]")
+            raise RuntimeError("Runtime compatibility check failed")
+
+        for warning in compatibility.get("warnings", []):
+            console.print(f"⚠️  [yellow]Warning: {warning}[/yellow]")
+
+        # Load model
+        console.print("\n[bold blue]Step 3:[/bold blue] Loading model...")
+        runner.load_model()
+        console.print("✓ Model loaded successfully")
+
+        # Step 4: Generate text
+        console.print("\n[bold blue]Step 4:[/bold blue] Generating text...")
+
+        config = GenerationConfig(
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
+
+        generated_text = runner.generate(prompt, config)
+
+        # Extract only the newly generated portion (remove the original prompt)
+        if generated_text.startswith(prompt):
+            completion = generated_text[len(prompt) :]
+        else:
+            completion = generated_text
+
+        # Display results
+        console.print("\n" + "=" * 60)
+        console.print(f"[bold green]Prompt:[/bold green] {prompt}")
+        console.print(f"[bold cyan]Generated:[/bold cyan] {completion}")
+        console.print("=" * 60)
+
+        if verbose:
+            model_info = runner.get_model_info()
+            console.print(
+                f"\n[dim]Model: {model_info['model_id']} "
+                f"({model_info['architecture']})[/dim]"
+            )
+            console.print(f"[dim]Quantized: {model_info['is_quantized']}[/dim]")
+
+    except Exception as e:
+        console.print(f"[bold red]❌ Inference failed:[/bold red] {str(e)}")
         if verbose:
             console.print_exception()
         raise typer.Exit(1)
