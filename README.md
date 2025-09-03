@@ -64,7 +64,7 @@ python -m src.cli.main list --path dist --verbose
 ### Currently Supported (Native Optimum ONNX Export)
 * **GPT-2** (all sizes) - Reference implementation, fully tested ✅
 * **microsoft/DialoGPT-small** - Tested and working ✅
-* **TinyLlama-1.1B** - Popular lightweight option (memory constraints may apply)
+* **TinyLlama-1.1B** - Popular lightweight option (requires ~11.5GB memory for ONNX export)
 * **Phi-2 (2.7B)** - Microsoft's efficient edge model
 * **StableLM models** - Stability AI variants
 * **Gemma models** - Google's open models (may require access)
@@ -152,6 +152,9 @@ python scripts/test_onnx_export_e2e.py
 
 # Test end-to-end quantization pipeline with real models
 python scripts/test_quantization_e2e.py
+
+# Test with different models and options
+python scripts/test_quantization_e2e.py --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --low-memory
 
 # Quick demo of quantization concepts and configuration
 python scripts/demo_quantization.py

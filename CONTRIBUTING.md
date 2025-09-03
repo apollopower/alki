@@ -54,6 +54,9 @@ python scripts/test_onnx_export_e2e.py --model distilgpt2
 
 # Test end-to-end quantization pipeline (optional, takes ~2 minutes)
 python scripts/test_quantization_e2e.py
+
+# Test with different models and memory options
+python scripts/test_quantization_e2e.py --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --low-memory --calibration-samples 8
 ```
 
 **Pre-push checklist:**
