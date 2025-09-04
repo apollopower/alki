@@ -57,6 +57,9 @@ python scripts/test_quantization_e2e.py
 
 # Test with different models and memory options
 python scripts/test_quantization_e2e.py --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --low-memory --calibration-samples 8
+
+# Test runtime inference with created bundles
+python -m src.cli.main run dist/gpt2-cpu --prompt "Test inference" --max-tokens 50 --verbose
 ```
 
 **Pre-push checklist:**
@@ -119,6 +122,41 @@ When contributing quantization-related changes:
 - Ensure unit tests pass for configuration validation and smoothing calculations
 - Run the end-to-end test to verify compatibility with real models
 - Test with different alpha values (0.0, 0.5, 1.0) to verify smoothing behavior
+
+### Runtime Testing
+
+The project includes comprehensive runtime inference testing:
+
+* **Unit tests**: `pytest tests/test_runtime.py` (fast, <5 seconds)
+* **Integration test**: Test with actual model bundles using the `alki run` command
+* **Manual testing**: Use different generation parameters to validate functionality
+
+When contributing runtime-related changes:
+- Ensure unit tests pass for configuration validation and text generation logic
+- Test with both quantized and non-quantized model bundles
+- Validate generation with different sampling parameters (temperature, top-p, top-k)
+- Test error handling for missing models and invalid configurations
+
+**Example runtime testing workflow**:
+```bash
+# Create a test bundle first
+python -m src.cli.main build gpt2 --output dist --target cpu
+
+# Test basic inference
+python -m src.cli.main run dist/gpt2-cpu --prompt "Hello world" --max-tokens 20
+
+# Test with different parameters
+python -m src.cli.main run dist/gpt2-cpu \
+  --prompt "Explain machine learning" \
+  --max-tokens 100 \
+  --temperature 0.8 \
+  --top-p 0.95 \
+  --verbose
+
+# Test with quantized models
+python -m src.cli.main build gpt2 --output dist --target cpu --preset balanced
+python -m src.cli.main run dist/gpt2-cpu --prompt "Test quantized inference"
+```
 
 ## 📜 License
 
