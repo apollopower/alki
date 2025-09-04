@@ -17,8 +17,8 @@ Alki takes a Hugging Face model, optimizes it, and produces a self-contained dep
 * [x] SmoothQuant W8A8 quantization pass
 * [x] Bundle format (`bundle.yaml` + tokenizer + model artifacts)
 * [x] CLI (`alki build`, `alki info`, `alki list`)
-* [ ] Runtime commands (`alki run`, `alki bench`)
-* [ ] ORT GenAI runtime integration (CPU EP)
+* [x] Runtime commands (`alki run`)
+* [x] ONNX Runtime integration (CPU EP)
 * [ ] OpenVINO preset (INT8 acceleration on Intel CPUs/NPUs)
 * [ ] Basic validation harness (perplexity, latency, memory)
 
@@ -55,8 +55,51 @@ python -m src.cli.main info dist/gpt2-cpu
 # List all bundles
 python -m src.cli.main list --path dist --verbose
 
-# Runtime inference (coming soon)
-# alki run --bundle dist/gpt2-cpu --prompt "Hello from the edge!"
+# Runtime inference
+python -m src.cli.main run dist/gpt2-cpu --prompt "Hello from the edge!" --max-tokens 50 --temperature 0.8
+```
+
+## 🎮 Runtime Inference
+
+The `alki run` command performs text generation using your deployed bundles:
+
+```bash
+# Basic usage
+python -m src.cli.main run dist/gpt2-cpu --prompt "Once upon a time"
+
+# Advanced generation parameters
+python -m src.cli.main run dist/gpt2-cpu \
+  --prompt "The future of AI is" \
+  --max-tokens 100 \
+  --temperature 0.8 \
+  --top-p 0.95 \
+  --verbose
+
+# Interactive generation with different models
+python -m src.cli.main run dist/DialoGPT-small-cpu \
+  --prompt "Human: Hello! How are you today?" \
+  --max-tokens 75 \
+  --temperature 0.7
+```
+
+### Parameters
+
+* `--prompt, -p`: Input text prompt for generation (default: "Hello, I am")
+* `--max-tokens, -m`: Maximum tokens to generate (default: 100)
+* `--temperature, -t`: Sampling temperature, 0.1-2.0 (default: 1.0)
+* `--top-p`: Nucleus sampling threshold, 0.0-1.0 (default: 0.9)
+* `--verbose, -v`: Show detailed generation info and timing
+
+### Expected Output
+
+```
+🤖 Loading bundle: gpt2-cpu
+✓ Model loaded successfully
+🎯 Generating with max_tokens=50, temperature=0.8
+
+Generated text: Once upon a time, there was a small village nestled in the mountains where everyone knew each other's stories.
+
+📊 Generation complete: 23 tokens in 1.2s (19.2 tokens/sec)
 ```
 
 ## 🤖 Supported Models
@@ -120,7 +163,7 @@ The `alpha` parameter controls smoothing strength:
 
 * **Python 3.10+** (pipelines, CLI, quantization scripts)
 * **Typer** for CLI
-* **ONNX / ONNX Runtime GenAI** as the first runtime
+* **ONNX / ONNX Runtime** as the runtime backend
 * **OpenVINO Toolkit** for Intel acceleration
 * **Pytest** for validation harness
 * **Docker (optional)** for reproducible builds (OpenVINO builder image planned)

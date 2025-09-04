@@ -12,9 +12,11 @@ This document tracks the development priorities and implementation plan for Alki
 - [x] CLI commands (`build`, `info`, `list`)
 - [x] Comprehensive test suite (99 tests passing)
 
-**❌ Missing from Phase 1:**
-- [ ] Runtime commands (`run`, `bench`) 
-- [ ] ORT GenAI integration for inference
+**✅ Recently Completed:**
+- [x] Runtime commands (`alki run`) 
+- [x] ONNX Runtime integration for inference
+
+**❌ Still Missing from Phase 1:**
 - [ ] OpenVINO backend implementation
 - [ ] Validation harness (accuracy, performance)
 
@@ -45,21 +47,25 @@ This document tracks the development priorities and implementation plan for Alki
 - Qwen2.5-0.5B (needs custom config investigation)
 
 ### 2. **Runtime Implementation** (`alki run`)
-*Status: Not Started*
+*Status: ✅ COMPLETED*
 
-**Problem**: No way to actually run inference with created bundles.
+**Implemented Features**:
+- [x] ONNX Runtime integration for inference  
+- [x] Basic prompt interface with generation parameters
+- [x] Tokenizer integration with transformers library
+- [x] Support for both CPU and quantized models
+- [x] Rich CLI with progress indicators and verbose output
+- [x] Temperature, top-p, top-k sampling controls
+- [x] Tested with GPT-2 and DialoGPT-small models
 
-**Tasks**:
-- [ ] Integrate ONNX Runtime GenAI for inference
-- [ ] Implement basic prompt interface
-- [ ] Add streaming response support
-- [ ] Handle tokenizer integration properly
-- [ ] Support both CPU and quantized models
-
-**CLI Target**:
+**Working CLI**:
 ```bash
-alki run --bundle dist/qwen3-cpu --prompt "Explain edge computing"
+python -m src.cli.main run dist/gpt2-cpu --prompt "Explain edge computing" --max-tokens 100 --temperature 0.8
 ```
+
+**Future Enhancements**:
+- [ ] Streaming response support (`generate_stream()`)
+- [ ] Better conversation handling for dialog models
 
 ### 3. **Benchmark Suite** (`alki bench`)  
 *Status: Not Started*
@@ -165,7 +171,7 @@ alki bench --bundle dist/qwen3-cpu --compare-models
 **Phase 1 Complete When**:
 - [ ] Qwen3-0.6B fully supported (build → run → bench)
 - [ ] At least 3 edge models validated and documented
-- [ ] `alki run` provides acceptable inference experience
+- [x] `alki run` provides acceptable inference experience ✅
 - [ ] Basic benchmarking shows quantization benefits
 
 **Phase 2 Success**:
@@ -175,5 +181,5 @@ alki bench --bundle dist/qwen3-cpu --compare-models
 
 ---
 
-*Last Updated: December 2024*
+*Last Updated: September 2025*
 *Next Review: After model support expansion*
