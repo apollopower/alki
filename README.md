@@ -1,33 +1,34 @@
 # Alki 🌊
 
-**An open-source toolchain for deploying LLMs at the edge with best-in-class quantization methods.**
+**An open-source toolchain for deploying LLMs at the edge with llama.cpp.**
 
-Alki takes a Hugging Face model, applies state-of-the-art quantization (SmoothQuant, AWQ, GPTQ), and produces an optimized deployment bundle that runs efficiently on edge devices.
+Alki takes a Hugging Face model, converts it to GGUF format, applies quantization (Q4_K_M, Q5_K_M, Q8_0), and produces production-ready deployment bundles that run efficiently on edge devices with minimal dependencies.
 
 ## ✨ Goals
 
-* **Simple**: One command from HuggingFace to optimized edge bundle.
-* **Powerful**: Multiple quantization methods (SmoothQuant, AWQ, GPTQ) with built-in benchmarking.
-* **Informed**: Automatic comparison tools help choose optimal settings.
-* **Portable**: Self-contained bundles run on edge devices with minimal dependencies.
+* **Simple**: One command from HuggingFace to optimized GGUF bundle.
+* **Portable**: CPU/GPU support via llama.cpp runtime with broad hardware compatibility.
+* **Production-ready**: Containers, systemd units, and deployment manifests included.
+* **A/B safe**: Versioned bundles with manifests for reliable fleet deployments.
 
 ## 🗺️ Roadmap (Phase 1)
 
-* [x] Model ingestion (HF → ONNX export)
-* [x] SmoothQuant W8A8 quantization pass
-* [x] Bundle format (`bundle.yaml` + tokenizer + model artifacts)
-* [x] CLI (`alki build`, `alki info`, `alki list`)
-* [x] Runtime commands (`alki run`)
-* [x] ONNX Runtime integration (CPU EP)
-* [ ] OpenVINO preset (INT8 acceleration on Intel CPUs/NPUs)
-* [ ] Basic validation harness (perplexity, latency, memory)
+* [ ] Model ingestion (HF → GGUF conversion)
+* [ ] GGUF quantization (Q4_K_M, Q5_K_M, Q8_0)
+* [ ] Bundle format (manifests + GGUF models + deployment configs)
+* [ ] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`)
+* [ ] llama.cpp runtime integration
+* [ ] Container image generation with llama-server
+* [ ] Deployment recipes (systemd, k3s, Nomad)
+* [ ] Basic validation harness (smoke tests, benchmarking)
 
 ## 🗺️ Roadmap (Phase 2)
 
-* [ ] Optimum backend integration (leverage HF Optimum as building blocks)
-  * [ ] Optimum-Intel for OpenVINO flows
-  * [ ] Optimum-NVIDIA for TensorRT-LLM
-  * [ ] Unified backend plugin interface
+* [ ] Additional runtime backends as plugins
+  * [ ] Ollama integration (auto-generate Modelfile)
+  * [ ] MLC-LLM support (TVM packages)
+  * [ ] ONNX Runtime option (backward compatibility)
+* [ ] Fleet management and A/B deployment tools
 
 ## 🚀 Quickstart
 
@@ -37,147 +38,212 @@ python -m venv .venv
 source .venv/bin/activate
 make install
 
-# Build a CPU bundle with quantization (74.6% size reduction)
-python -m src.cli.main build gpt2 \
-  --output dist \
-  --target cpu \
-  --preset balanced \
-  --alpha 0.5
+# Pack a model: HF → GGUF + quantize to multiple profiles
+alki pack \
+  --hf "Qwen/Qwen3-0.6B-Instruct" \
+  --quant "Q4_K_M,Q5_K_M,Q8_0" \
+  --ctx 4096 \
+  --out ./dist/qwen3-0.6b
 
-# Build without quantization
-python -m src.cli.main build gpt2 \
-  --output dist \
-  --no-quantize
+# Validate the bundle
+alki validate --bundle ./dist/qwen3-0.6b
 
-# View bundle information
-python -m src.cli.main info dist/gpt2-cpu
+# Build container image
+alki image build \
+  --bundle ./dist/qwen3-0.6b \
+  --runtime llama.cpp \
+  --tag acme/qwen3-0.6b:Q4
 
-# List all bundles
-python -m src.cli.main list --path dist --verbose
+# Run locally with llama-server
+llama-server \
+  -m ./dist/qwen3-0.6b/models/qwen3-0_6b-instruct-q4_k_m.gguf \
+  --api --host 0.0.0.0 --port 8080 --ctx-size 4096
 
-# Runtime inference
-python -m src.cli.main run dist/gpt2-cpu --prompt "Hello from the edge!" --max-tokens 50 --temperature 0.8
+# Or run with Docker
+docker run -p 8080:8080 acme/qwen3-0.6b:Q4
 
-# Compare quantization methods (future)
-python -m src.cli.main compare gpt2 --methods all
+# Generate deployment recipes
+alki recipe emit \
+  --bundle ./dist/qwen3-0.6b \
+  --target systemd \
+  --out ./dist/deploy/systemd
 ```
 
 ## 🎮 Runtime Inference
 
-The `alki run` command performs text generation using your deployed bundles:
+Once deployed, your models serve an OpenAI-compatible API via llama-server:
 
 ```bash
-# Basic usage
-python -m src.cli.main run dist/gpt2-cpu --prompt "Once upon a time"
+# Test with curl
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-0.6b-instruct",
+    "messages": [{"role": "user", "content": "Hello, how are you?"}],
+    "max_tokens": 100,
+    "temperature": 0.8
+  }'
 
-# Advanced generation parameters
-python -m src.cli.main run dist/gpt2-cpu \
-  --prompt "The future of AI is" \
-  --max-tokens 100 \
-  --temperature 0.8 \
-  --top-p 0.95 \
-  --verbose
+# Or use any OpenAI client library
+import openai
+client = openai.OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed")
 
-# Interactive generation with different models
-python -m src.cli.main run dist/DialoGPT-small-cpu \
-  --prompt "Human: Hello! How are you today?" \
-  --max-tokens 75 \
-  --temperature 0.7
+response = client.chat.completions.create(
+    model="qwen3-0.6b-instruct",
+    messages=[{"role": "user", "content": "Hello, how are you?"}],
+    max_tokens=100
+)
 ```
 
-### Parameters
+### Health Checks
 
-* `--prompt, -p`: Input text prompt for generation (default: "Hello, I am")
-* `--max-tokens, -m`: Maximum tokens to generate (default: 100)
-* `--temperature, -t`: Sampling temperature, 0.1-2.0 (default: 1.0)
-* `--top-p`: Nucleus sampling threshold, 0.0-1.0 (default: 0.9)
-* `--verbose, -v`: Show detailed generation info and timing
+```bash
+# Check model status
+curl http://localhost:8080/v1/models
 
-### Expected Output
-
-```
-🤖 Loading bundle: gpt2-cpu
-✓ Model loaded successfully
-🎯 Generating with max_tokens=50, temperature=0.8
-
-Generated text: Once upon a time, there was a small village nestled in the mountains where everyone knew each other's stories.
-
-📊 Generation complete: 23 tokens in 1.2s (19.2 tokens/sec)
+# Health endpoint
+curl http://localhost:8080/health
 ```
 
 ## 🤖 Supported Models
 
-### Currently Supported (Native Optimum ONNX Export)
-* **GPT-2** (all sizes) - Reference implementation, fully tested ✅
-* **microsoft/DialoGPT-small** - Tested and working ✅
-* **TinyLlama-1.1B** - Popular lightweight option (requires ~11.5GB memory for ONNX export)
-* **Phi-2 (2.7B)** - Microsoft's efficient edge model
-* **StableLM models** - Stability AI variants
-* **Gemma models** - Google's open models (may require access)
-* **Llama family** - Includes all LlamaForCausalLM variants
-* **Mistral family** - Full-size models for testing
+### GGUF Compatible Models
+Most modern transformer models with good llama.cpp support work out-of-the-box:
 
-### Future Models (Require Custom ONNX Configuration)
-* **Qwen3-0.6B** - Needs custom ONNX config + high memory (>4GB)
-* **Qwen2.5-0.5B** - Needs custom ONNX config development
-* **Phi-3.5-mini** - Not currently supported (different from Phi-2)
+* **Qwen family** - Qwen2.5, Qwen3 series (excellent edge performance) ✅
+* **Llama family** - Llama 2, Llama 3/3.1/3.2 (all sizes) ✅
+* **Mistral family** - Mistral 7B, Mistral Nemo, Codestral ✅
+* **Phi family** - Phi-3, Phi-3.5 (Microsoft's efficient models) ✅
+* **Gemma family** - Gemma 2B, 7B, 9B, 27B ✅
+* **TinyLlama** - Popular 1.1B parameter model ✅
+* **StableLM** - Stability AI's open models ✅
 
-### Known Incompatible
-* **Mamba models** - Architecture not supported by ONNX export
-* **Mixtral models** - Architecture not supported by ONNX export
+### Quantization Profiles
 
-**Note**: Models in "Currently Supported" use native Optimum ONNX export and should work out-of-the-box. "Future Models" require additional development work. Memory constraints may affect larger models on resource-limited systems. See [ROADMAP.md](ROADMAP.md) for detailed expansion plans.
+* **Q4_K_M**: Edge-friendly default, ~4-bit quantization with good quality
+* **Q5_K_M**: Better quality, slightly larger size
+* **Q8_0**: High quality, larger size, good for development/benchmarking
+
+### Requirements
+
+* Models must have llama.cpp conversion support
+* HuggingFace models with proper tokenizer configuration
+* Respects model licensing and gating requirements
+
+**Note**: Most modern transformer architectures work well. MoE (Mixture of Experts) and state-space models may have limited support depending on llama.cpp capabilities.
 
 ## 📦 Bundle Layout
 
 ```
-dist/gpt2-cpu/
-  bundle.yaml            # Bundle manifest with metadata and runtime config
-  model.onnx            # Quantized ONNX model (158MB from 622MB with SmoothQuant)
-  model_original.onnx   # Original FP32 model (if quantized)
-  tokenizer/            # tokenizer.json, tokenizer_config.json, vocab.json, merges.txt
-  runners/              # Lightweight launchers (placeholder for future)
+dist/qwen3-0.6b/
+  models/
+    qwen3-0_6b-instruct-q4_k_m.gguf    # Q4_K_M quantized model (~350MB)
+    qwen3-0_6b-instruct-q5_k_m.gguf    # Q5_K_M quantized model (~420MB)
+    qwen3-0_6b-instruct-q8_0.gguf      # Q8_0 quantized model (~640MB)
+  metadata/
+    manifest.json                       # Bundle metadata, hashes, capabilities
+    sbom.spdx.json                     # Software bill of materials
+    LICENSE.txt                        # Model license
+    README.md                          # Quick start guide
+  deploy/
+    systemd/
+      alki-qwen3.service              # systemd unit file
+    k3s/
+      deployment.yaml                 # Kubernetes deployment
+      service.yaml                    # Kubernetes service
+    docker/
+      Dockerfile                      # Container image definition
 ```
 
-## 🔌 Presets
+## 🚀 Deployment Recipes
 
-* **cpu** → ONNX Runtime GenAI, CPU execution provider.
-* **openvino** → ONNX Runtime GenAI + Intel OpenVINO EP with INT8 calibration.
+Alki generates production-ready deployment configurations for various platforms:
 
-More presets coming (TensorRT-LLM, MLX, ExecuTorch).
+### Systemd (Bare Metal/Linux)
+```bash
+alki recipe emit --bundle ./dist/qwen3-0.6b --target systemd --out ./deploy
+```
+Generates: `systemd/alki-qwen3.service` with proper service configuration, auto-restart, and resource limits.
 
-## 🎯 Quantization Methods
+### Kubernetes/k3s
+```bash
+alki recipe emit --bundle ./dist/qwen3-0.6b --target k3s --out ./deploy
+```
+Generates: Deployment, Service, ConfigMap with health checks and horizontal pod autoscaling.
 
-Alki provides multiple state-of-the-art quantization techniques:
+### Docker/Containers
+```bash
+alki image build --bundle ./dist/qwen3-0.6b --runtime llama.cpp --tag acme/qwen3:Q4
+```
+Creates optimized container images with llama-server, health endpoints, and proper security context.
 
-- **SmoothQuant**: Balanced approach, good for most models. Provides 74.6% size reduction with <1% accuracy loss.
-- **AWQ**: Activation-aware quantization, often achieves best accuracy preservation *(coming soon)*
-- **GPTQ**: Aggressive compression for smallest model sizes *(coming soon)*
+## 📋 Manifests
 
-Use `alki compare` to find the best method for your model and hardware *(coming soon)*.
+### Model Manifest (manifest.json)
+```json
+{
+  "name": "qwen3-0.6b-instruct",
+  "version": "2025-09-06.1",
+  "artifacts": [
+    {"quant":"Q4_K_M","uri":"./models/qwen3-0_6b-instruct-q4_k_m.gguf","sha256":"abc123...","size":367001600},
+    {"quant":"Q5_K_M","uri":"./models/qwen3-0_6b-instruct-q5_k_m.gguf","sha256":"def456...","size":441450496}
+  ],
+  "defaults": {"ctx":4096,"threads":"auto","ngl":0},
+  "template":"qwen3",
+  "license":"apache-2.0"
+}
+```
 
-### Current SmoothQuant Features
+### Runtime Manifest
+```json
+{
+  "runtime": "llama.cpp",
+  "server": {"host":"0.0.0.0","port":8080,"api":true},
+  "args": {"ctx":4096,"threads":"auto","ngl":0},
+  "health": {"path":"/v1/models","timeout_s":5}
+}
+```
 
-* **74.6% model size reduction** (622MB → 158MB for GPT-2)
-* **2-4x faster inference** on CPUs with INT8 support
-* **Minimal accuracy loss** (<1% typical)
-* **No retraining required**
+## 🎯 GGUF Quantization Profiles
 
-The `alpha` parameter controls smoothing strength:
-* `α=0.0`: Baseline quantization (fastest)
-* `α=0.5`: Balanced (recommended default)
-* `α=1.0`: Maximum smoothing (best for outlier-heavy models)
+Alki uses llama.cpp's battle-tested quantization methods:
 
-**Note**: Warning messages during quantization are normal and expected part of the ONNX Runtime optimization process.
+### Quantization Options
+
+- **Q4_K_M**: 4-bit quantization, edge-friendly default with excellent quality/size balance
+- **Q5_K_M**: 5-bit quantization, better quality with moderate size increase
+- **Q8_0**: 8-bit quantization, high quality for development and benchmarking
+
+### Performance Characteristics
+
+| Profile | Size Reduction | Inference Speed | Quality Loss | Use Case |
+|---------|----------------|-----------------|--------------|----------|
+| Q4_K_M  | ~75%          | Fastest         | Minimal      | Edge deployment |
+| Q5_K_M  | ~65%          | Fast            | Very low     | Balanced performance |
+| Q8_0    | ~50%          | Good            | Nearly none  | Development/testing |
+
+### Auto-Profiling (Future)
+
+Alki will include a `calibrate` command that:
+* Detects RAM/CPU/AVX capabilities and available GPU+VRAM
+* Runs benchmarks on different quantization profiles
+* Recommends optimal settings for your hardware
+* Generates per-host configuration profiles
+
+**Example**: `alki calibrate --model qwen3-0.6b --save-profile edge-device.json`
 
 ## 🛠️ Tech Stack
 
-* **Python 3.10+** (pipelines, CLI, quantization scripts)
-* **Typer** for CLI
-* **ONNX / ONNX Runtime** as the runtime backend
-* **OpenVINO Toolkit** for Intel acceleration
-* **Pytest** for validation harness
-* **Docker (optional)** for reproducible builds (OpenVINO builder image planned)
+* **llama.cpp** - Core runtime with broad CPU/GPU compatibility
+* **Python 3.10+** - CLI, conversion pipeline, and bundle generation
+* **Typer** - Command-line interface
+* **GGUF** - Model format with efficient quantization
+* **Docker** - Container packaging and distribution
+* **Pytest** - Testing and validation harness
+
+### Optional Performance Components (Future)
+* **Go/Rust** - Performance-critical packaging operations
+* **Sigstore/cosign** - Signed manifests and artifact verification
 
 ## 🔧 Development
 
@@ -201,23 +267,30 @@ make format        # Format code with black
 make lint          # Lint with ruff
 make clean         # Clean cache files
 
-# Test real ONNX export with actual models (separate from unit tests)
-python scripts/test_onnx_export_e2e.py
+# Test end-to-end packing pipeline with real models
+python scripts/test_pack_e2e.py
 
-# Test end-to-end quantization pipeline with real models
-python scripts/test_quantization_e2e.py
+# Test with different models and quantization profiles
+python scripts/test_pack_e2e.py --model Qwen/Qwen3-0.6B-Instruct --quant Q4_K_M,Q5_K_M
 
-# Test with different models and options
-python scripts/test_quantization_e2e.py --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --low-memory
+# Test container image generation
+python scripts/test_image_build.py
 
-# Quick demo of quantization concepts and configuration
-python scripts/demo_quantization.py
+# Quick demo of GGUF conversion and quantization
+python scripts/demo_gguf_pipeline.py
 ```
 
 **Important**: All commands require an activated virtual environment:
 ```bash
 source .venv/bin/activate  # Required before any make or python commands
 ```
+
+### Security & Compliance
+
+* **License compliance**: Respects HuggingFace model licensing and gating
+* **Signed manifests**: Support for Sigstore/cosign verification (future)
+* **SBOM generation**: Software bill of materials for all bundles
+* **Checksum verification**: SHA256 hashes for all artifacts
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
@@ -231,6 +304,8 @@ Free to use, modify, and contribute.
 
 Alki is just getting started. Contributions are welcome, especially around:
 
-* New backends (Jetson TensorRT, Apple MLX, Android QNN)
-* Quantization recipes (AWQ, GPTQ, KV-cache quant)
-* Benchmarking + validation tools
+* Additional runtime backends (Ollama, MLC-LLM, TensorRT-LLM)
+* Deployment targets (Jetson, Apple MLX, Android QNN, WebAssembly)
+* Fleet management and A/B deployment tools
+* Benchmarking and validation frameworks
+* Security and compliance features
