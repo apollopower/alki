@@ -24,3 +24,6 @@ model_cache/
 tmp/
 temp/
 *.tmp
+
+build/
+.ruff_cache/
