@@ -11,16 +11,36 @@ Alki takes a Hugging Face model, converts it to GGUF format, applies quantizatio
 * **Production-ready**: Containers, systemd units, and deployment manifests included.
 * **A/B safe**: Versioned bundles with manifests for reliable fleet deployments.
 
+## ✅ Current Capabilities
+
+Alki currently provides:
+
+* **GGUF Model Validation** - Validate pre-converted GGUF models from HuggingFace or local files
+* **Model Loading & Inference** - Load and test GGUF models using llama-cpp-python
+* **Automatic Cache Management** - Smart cleanup of downloaded models to manage disk space
+* **CLI Interface** - `alki validate` command for model validation workflows
+* **Development Tools** - Test scripts for validation and model loading
+
+```bash
+# Validate GGUF models
+alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
+alki validate /path/to/local/model.gguf
+
+# With options
+alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
+  --prompt "Explain machine learning" --max-tokens 50 --no-cleanup
+```
+
 ## 🗺️ Roadmap (Phase 1)
 
 * [ ] Model ingestion (HF → GGUF conversion)
 * [ ] GGUF quantization (Q4_K_M, Q5_K_M, Q8_0)
 * [ ] Bundle format (manifests + GGUF models + deployment configs)
-* [ ] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`)
-* [ ] llama.cpp runtime integration
+* [🔶] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`) - *validate command implemented*
+* [🔶] llama.cpp runtime integration - *GGUF model loading implemented*
 * [ ] Container image generation with llama-server
 * [ ] Deployment recipes (systemd, k3s, Nomad)
-* [ ] Basic validation harness (smoke tests, benchmarking)
+* [🔶] Basic validation harness (smoke tests, benchmarking) - *GGUF validation implemented*
 
 ## 🗺️ Roadmap (Phase 2)
 
@@ -45,8 +65,8 @@ alki pack \
   --ctx 4096 \
   --out ./dist/qwen3-0.6b
 
-# Validate the bundle
-alki validate --bundle ./dist/qwen3-0.6b
+# Validate a GGUF model from HuggingFace
+alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
 
 # Build container image
 alki image build \
@@ -267,16 +287,27 @@ make format        # Format code with black
 make lint          # Lint with ruff
 make clean         # Clean cache files
 
-# Test end-to-end packing pipeline with real models
+# Test GGUF model validation
+python scripts/test_validator.py
+
+# Test specific GGUF models
+python scripts/test_validator.py --repo-id "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
+python scripts/test_validator.py --repo-id "Qwen/Qwen2-0.5B-Instruct-GGUF" --filename "*q8_0.gguf" --no-cleanup
+
+# Test model loading and inference
+python scripts/test_llama.py "Qwen/Qwen2-0.5B-Instruct-GGUF" "*q8_0.gguf"
+python scripts/test_llama.py "Qwen/Qwen3-0.6B-GGUF" "*Q8_0.gguf" --no-cleanup
+
+# Test end-to-end packing pipeline with real models (future)
 python scripts/test_pack_e2e.py
 
-# Test with different models and quantization profiles
+# Test with different models and quantization profiles (future)
 python scripts/test_pack_e2e.py --model Qwen/Qwen3-0.6B-Instruct --quant Q4_K_M,Q5_K_M
 
-# Test container image generation
+# Test container image generation (future)
 python scripts/test_image_build.py
 
-# Quick demo of GGUF conversion and quantization
+# Quick demo of GGUF conversion and quantization (future)
 python scripts/demo_gguf_pipeline.py
 ```
 

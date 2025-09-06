@@ -13,6 +13,7 @@ dependencies = [
   "typer[all]>=0.9",
   "transformers>=4.55",
   "huggingface_hub>=0.25",
+  "llama-cpp-python>=0.3.16",
   "safetensors>=0.4",
   "pyyaml>=6.0",
   "rich>=14.0",
