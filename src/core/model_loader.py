@@ -2,8 +2,30 @@ from pathlib import Path
 import logging
 from huggingface_hub import snapshot_download
 from transformers import AutoConfig, AutoTokenizer
+from llama_cpp import Llama
 
 logger = logging.getLogger(__name__)
+
+
+class LlamaCppModelLoader:
+    """Downloads and prepares models for conversion using llama.cpp"""
+
+    def prepareFromHuggingFace(
+        self, repo_id: str, filename: str, verbose: bool
+    ) -> Llama:
+        """
+        Download model and prepare metadata
+        """
+        logger.info(f"Downloading: {repo_id}")
+
+        model = Llama.from_pretrained(
+            repo_id=repo_id,
+            filename=filename,
+            verbose=verbose,
+        )
+
+        logger.info(f"Loaded Llama model with {model.n_ctx} context length")
+        return model
 
 
 class HuggingFaceModelLoader:
