@@ -191,15 +191,15 @@ class TestBundleBuilder:
         assert runtime_config.input_names == ["input_ids", "attention_mask"]
         assert runtime_config.output_names == ["logits"]
 
-    def test_create_runtime_config_openvino(self, mock_onnx_artifacts):
-        """Test runtime config creation for OpenVINO target."""
+    def test_create_runtime_config_cpu_only(self, mock_onnx_artifacts):
+        """Test runtime config creation - only CPU supported now."""
         builder = BundleBuilder()
 
         runtime_config = builder._create_runtime_config(
-            mock_onnx_artifacts, None, "openvino"
+            mock_onnx_artifacts, None, "cpu"
         )
 
-        assert runtime_config.provider == "OpenVINOExecutionProvider"
+        assert runtime_config.provider == "CPUExecutionProvider"
 
     def test_create_runtime_config_with_quantization(
         self, mock_onnx_artifacts, mock_quantization_artifacts
@@ -335,7 +335,7 @@ class TestConvenienceFunction:
             onnx_artifacts=mock_onnx_artifacts,
             quantization_artifacts=mock_quantization_artifacts,
             output_path=output_path,
-            target="openvino",
+            target="cpu",
             preset="fast",
         )
 
@@ -345,7 +345,7 @@ class TestConvenienceFunction:
             onnx_artifacts=mock_onnx_artifacts,
             quantization_artifacts=mock_quantization_artifacts,
             output_path=output_path,
-            target="openvino",
+            target="cpu",
             preset="fast",
         )
 

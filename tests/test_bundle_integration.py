@@ -353,20 +353,18 @@ class TestBundleIntegration:
             assert cpu_bundle.runtime_config.provider == "CPUExecutionProvider"
             assert cpu_bundle.metadata.target == "cpu"
 
-            # Test OpenVINO target
-            openvino_bundle = create_bundle_from_pipeline(
+            # Only CPU target supported now - test different preset
+            cpu_bundle2 = create_bundle_from_pipeline(
                 model_artifacts=model_artifacts,
                 onnx_artifacts=onnx_artifacts,
                 quantization_artifacts=None,
-                output_path=temp_path / "openvino_bundle",
-                target="openvino",
-                preset="balanced",
+                output_path=temp_path / "cpu_bundle2",
+                target="cpu",
+                preset="fast",
             )
 
-            assert (
-                openvino_bundle.runtime_config.provider == "OpenVINOExecutionProvider"
-            )
-            assert openvino_bundle.metadata.target == "openvino"
+            assert cpu_bundle2.runtime_config.provider == "CPUExecutionProvider"
+            assert cpu_bundle2.metadata.target == "cpu"
 
     def test_roundtrip_bundle_serialization(self, mock_all_pipeline_dependencies):
         """Test that bundle can be serialized and deserialized correctly."""

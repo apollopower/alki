@@ -165,6 +165,7 @@ class BundleManager:
     ) -> Dict[str, any]:
         """
         Check if bundle is compatible with current runtime environment.
+        Simplified to focus on CPU/quantization support.
 
         Args:
             bundle: Bundle to check compatibility for
@@ -180,36 +181,12 @@ class BundleManager:
             "recommendations": [],
         }
 
-        # Check execution provider compatibility
-        required_provider = runtime.provider
-        if target_provider and target_provider != required_provider:
+        # Simplified: We only support CPU execution provider
+        if runtime.provider != "CPUExecutionProvider":
             compatibility["compatible"] = False
             compatibility["issues"].append(
-                f"Bundle requires {required_provider} but {target_provider} requested"
+                f"Bundle requires {runtime.provider} but only CPU is supported"
             )
-
-        # Check for provider availability (simplified check)
-        available_providers = self._get_available_providers()
-        if required_provider not in available_providers:
-            compatibility["compatible"] = False
-            compatibility["issues"].append(
-                f"Required provider {required_provider} not available. "
-                f"Available: {', '.join(available_providers)}"
-            )
-
-        # Check quantization support
-        if runtime.is_quantized:
-            if required_provider == "CPUExecutionProvider":
-                # CPU provider generally supports quantization
-                pass
-            elif required_provider == "OpenVINOExecutionProvider":
-                # OpenVINO supports quantization well
-                pass
-            elif required_provider == "CUDAExecutionProvider":
-                # CUDA support for quantization varies
-                compatibility["recommendations"].append(
-                    "GPU quantization support may vary - test thoroughly"
-                )
 
         # Check ONNX opset compatibility
         opset_version = runtime.opset_version
@@ -227,21 +204,12 @@ class BundleManager:
     def _get_available_providers(self) -> List[str]:
         """
         Get list of available execution providers on current system.
+        Simplified: Only CPU provider supported.
 
         Returns:
             List of available provider names
         """
-        providers = ["CPUExecutionProvider"]  # Always available
-
-        try:
-            import onnxruntime as ort
-
-            available = ort.get_available_providers()
-            providers.extend([p for p in available if p not in providers])
-        except ImportError:
-            logger.warning("ONNX Runtime not available - limited provider detection")
-
-        return providers
+        return ["CPUExecutionProvider"]  # Only CPU support
 
     def export_bundle_info(
         self, bundles: List[Bundle], output_path: Path, format: str = "json"

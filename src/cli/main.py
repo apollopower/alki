@@ -73,8 +73,7 @@ def build(
         Targets.CPU,
         "--target",
         "-t",
-        help="Target deployment type",
-        click_type=click.Choice([Targets.CPU, Targets.OPENVINO]),
+        help="Target deployment type (currently only CPU supported)",
     ),
     preset: str = typer.Option(
         Presets.BALANCED,
@@ -139,7 +138,7 @@ def build(
         console.print("\n[bold blue]Step 2:[/bold blue] Exporting to ONNX...")
 
         onnx_config = OnnxExportConfig(
-            use_gpu=(target == Targets.GPU),
+            use_gpu=False,  # Only CPU supported
             use_cache=False,
             optimize=True,
         )

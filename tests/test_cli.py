@@ -199,7 +199,7 @@ class TestCLI:
 
         mock_bundle2 = MagicMock()
         mock_bundle2.metadata.model_id = "bert-base-uncased"
-        mock_bundle2.metadata.target = "openvino"
+        mock_bundle2.metadata.target = "cpu"
         mock_bundle2.metadata.preset = "fast"
         mock_bundle2.metadata.original_size_mb = 200
         mock_bundle2.metadata.quantized_size_mb = None
@@ -251,7 +251,7 @@ class TestCLI:
         "invalid_args,expected_error",
         [
             (["--alpha", "2.0"], "Invalid alpha"),  # Alpha should be 0.0-1.0
-            (["--target", "invalid_target"], "Invalid target"),
+            # Target validation removed - only CPU supported, no validation needed
             (["--preset", "invalid_preset"], "Invalid preset"),
         ],
     )

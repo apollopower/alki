@@ -9,8 +9,6 @@ and other constants to improve maintainability and reduce duplication.
 # ONNX Runtime Execution Providers
 class ExecutionProviders:
     CPU = "CPUExecutionProvider"
-    CUDA = "CUDAExecutionProvider"
-    OPENVINO = "OpenVINOExecutionProvider"
 
 
 # File names and paths
@@ -64,8 +62,6 @@ class ModelIO:
 # Target deployment types
 class Targets:
     CPU = "cpu"
-    OPENVINO = "openvino"
-    GPU = "gpu"  # Future support
 
 
 # Optimization presets

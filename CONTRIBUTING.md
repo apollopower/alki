@@ -85,11 +85,35 @@ tests/              # pytest suite
 
 ## 🚀 Ways to Contribute
 
-* **Code**: new features, bug fixes, optimization passes, backend support
-* **Docs**: tutorials, clarifications, diagrams
-* **Testing**: run models on your hardware (Jetson, Intel, Apple Silicon, etc.) and report results
-* **Research**: experiment with quantization/pruning and share findings
-* **Community**: help with issues, triage, and design discussions
+Alki is focused on providing the best quantization methods for edge deployment. Contributions are especially welcome around:
+
+* **Quantization methods**: New quantization techniques (AWQ, GPTQ, etc.)
+* **Benchmarking**: Validation tools and performance measurement
+* **Hardware optimization**: Device-specific optimization profiles  
+* **Model support**: Testing with new model architectures
+* **Documentation**: Tutorials, guides, and clarifications
+* **Testing**: Run models on your edge hardware and report results
+
+## Contributing Quantization Methods
+
+Alki's core value is providing the best quantization options. When contributing new methods:
+
+1. **Implement the BaseQuantizer interface** (see `src/core/quantizers/base_quantizer.py`)
+2. **Add comprehensive tests** including perplexity evaluation vs baseline
+3. **Include benchmarks** comparing to existing methods (speed, size, accuracy)
+4. **Document optimal use cases** and limitations in your method
+5. **Update the comparison tool** to include your method
+6. **Provide example usage** in CLI and documentation
+
+See `src/core/quantizers/` for examples of proper quantizer implementation.
+
+### Quantization Method Guidelines
+
+- Focus on **post-training quantization** (no fine-tuning/retraining)
+- Target **edge deployment** scenarios (memory/compute constrained)
+- Prioritize **practical applicability** over theoretical perfection
+- Include **hardware considerations** (CPU/GPU/NPU acceleration)
+- Measure **real-world performance** on actual edge devices
 
 ## 🔌 Backend Plugins
 
