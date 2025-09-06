@@ -17,7 +17,6 @@ Alki currently provides:
 
 * **GGUF Model Validation** - Validate pre-converted GGUF models from HuggingFace or local files
 * **Model Loading & Inference** - Load and test GGUF models using llama-cpp-python
-* **Automatic Cache Management** - Smart cleanup of downloaded models to manage disk space
 * **CLI Interface** - `alki validate` command for model validation workflows
 * **Development Tools** - Test scripts for validation and model loading
 
@@ -29,6 +28,9 @@ alki validate /path/to/local/model.gguf
 # With options
 alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
   --prompt "Explain machine learning" --max-tokens 50 --no-cleanup
+
+# With custom context size for edge devices
+alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --context-size 2048
 ```
 
 ## 🗺️ Roadmap (Phase 1)
@@ -65,8 +67,8 @@ alki pack \
   --ctx 4096 \
   --out ./dist/qwen3-0.6b
 
-# Validate a GGUF model from HuggingFace
-alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
+# Validate a GGUF model from HuggingFace with custom context size
+alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --context-size 1024
 
 # Build container image
 alki image build \
@@ -293,6 +295,9 @@ python scripts/test_validator.py
 # Test specific GGUF models
 python scripts/test_validator.py --repo-id "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
 python scripts/test_validator.py --repo-id "Qwen/Qwen2-0.5B-Instruct-GGUF" --filename "*q8_0.gguf" --no-cleanup
+
+# Test with custom context size
+python scripts/test_validator.py --repo-id "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --context-size 2048
 
 # Test model loading and inference
 python scripts/test_llama.py "Qwen/Qwen2-0.5B-Instruct-GGUF" "*q8_0.gguf"
