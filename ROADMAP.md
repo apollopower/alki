@@ -1,185 +1,121 @@
-# Alki Development Roadmap 🗺️
+# Alki Roadmap - Simplified & Focused
 
-This document tracks the development priorities and implementation plan for Alki.
+## Mission
+The simplest way to deploy HuggingFace models to edge devices with world-class quantization.
 
-## Current Status (September 2025)
+## Core Vision
+"The easiest way to deploy HuggingFace models to edge devices with best-in-class quantization"
 
-**✅ Phase 1: Core Pipeline - MOSTLY COMPLETE**
-- [x] Model ingestion (HuggingFace → Local)
-- [x] ONNX export (via Optimum)
-- [x] SmoothQuant W8A8 quantization 
-- [x] Bundle format (yaml + artifacts)
-- [x] CLI commands (`build`, `info`, `list`)
-- [x] Comprehensive test suite (99 tests passing)
+One command to go from HuggingFace → Optimized edge bundle with benchmarks.
 
-**✅ Recently Completed:**
-- [x] Runtime commands (`alki run`) 
-- [x] ONNX Runtime integration for inference
+## Phase 1: Quantization Excellence + Quality of Life
 
-**❌ Still Missing from Phase 1:**
-- [ ] OpenVINO backend implementation
-- [ ] Validation harness (accuracy, performance)
+### Multiple Quantization Methods
+- [ ] AWQ (Activation-aware Weight Quantization) implementation
+- [ ] GPTQ implementation with configurable bit width (4/8 bit)
+- [ ] Unified quantizer factory for method selection
+- [ ] Quantization comparison tool
 
----
+### Built-in Benchmarking Suite
+- [ ] Automatic benchmarking during build process
+- [ ] Perplexity evaluation against baseline
+- [ ] Speed profiling (tokens/second)
+- [ ] Memory usage tracking
+- [ ] Size reduction metrics
+- [ ] Comparison report generation
 
-## 🎯 Immediate Priorities (Next Sprint)
-
-### 1. **Expand Model Support Beyond GPT-2** 
-*Status: Research Complete, Implementation Needed*
-
-**Problem**: Currently only GPT-2 is validated, but many better edge models exist.
-
-**Tasks**:
-- [x] Update `src/core/onnx_exporter.py` architecture validation list
-- [x] Add TinyLlama, Phi, StableLM, Gemma to supported architectures  
-- [x] Test end-to-end pipeline with TinyLlama-1.1B (memory detection implemented)
-- [ ] Create model-specific optimization presets
-- [ ] Document model-specific quirks and settings
-
-**Target Models** (Optimum-native support + memory-friendly):
-- **TinyLlama-1.1B** ⭐ (Primary target - 1.1B params, native Llama support)
-- microsoft/phi-2 (2.7B params, native Phi support)  
-- StableLM-3B (native StableLM support)
-- google/gemma-2b (native Gemma support)
-
-**Future/Advanced Models** (require custom configs or high memory):
-- Qwen3-0.6B (needs custom ONNX config + high memory)
-- Qwen2.5-0.5B (needs custom config investigation)
-
-### 2. **Runtime Implementation** (`alki run`)
-*Status: ✅ COMPLETED*
-
-**Implemented Features**:
-- [x] ONNX Runtime integration for inference  
-- [x] Basic prompt interface with generation parameters
-- [x] Tokenizer integration with transformers library
-- [x] Support for both CPU and quantized models
-- [x] Rich CLI with progress indicators and verbose output
-- [x] Temperature, top-p, top-k sampling controls
-- [x] Tested with GPT-2 and DialoGPT-small models
-
-**Working CLI**:
+### Enhanced CLI Experience
 ```bash
-python -m src.cli.main run dist/gpt2-cpu --prompt "Explain edge computing" --max-tokens 100 --temperature 0.8
+# Example workflows
+alki build tinyllama --quantize awq --benchmark
+alki compare tinyllama --methods all
+alki info dist/tinyllama-awq  # Rich bundle information
 ```
 
-**Future Enhancements**:
-- [ ] Streaming response support (`generate_stream()`)
-- [ ] Better conversation handling for dialog models
+### Quality of Life Improvements
+- [ ] Rich bundle information display with performance metrics
+- [ ] Automatic perplexity checking to catch bad quantizations
+- [ ] Better error messages with actionable suggestions
+- [ ] Progress bars for long operations
+- [ ] Comparison tables for quantization methods
 
-### 3. **Benchmark Suite** (`alki bench`)  
-*Status: Not Started*
+## Phase 2: Hardware Optimization (Future)
 
-**Problem**: No way to measure model performance for edge deployment decisions.
+### Device Presets
+- [ ] Raspberry Pi optimization profiles
+- [ ] NVIDIA Jetson optimization profiles
+- [ ] Intel NUC optimization profiles
+- [ ] Auto-detection of hardware capabilities
 
-**Tasks**:
-- [ ] Memory usage tracking during inference
-- [ ] Tokens/second measurement  
-- [ ] Model loading time measurement
-- [ ] Compare original vs quantized accuracy
-- [ ] Generate comparison reports
+### Auto-optimization
+- [ ] Detect hardware and select optimal quantization
+- [ ] Hardware-specific kernel selection
+- [ ] Memory-aware configuration
 
-**CLI Target**:
+## Success Metrics
+- ✅ 3+ quantization methods (SmoothQuant, AWQ, GPTQ)
+- ✅ 5+ validated models (TinyLlama, Phi-2, Gemma-2B, Qwen-0.5B, StableLM-3B)
+- ✅ Integrated benchmarking showing clear performance/quality tradeoffs
+- ✅ <5 minute workflow from HuggingFace to deployed bundle
+- ✅ Comparison tools help users make informed decisions
+
+## Non-Goals (Staying Focused)
+- ❌ Model training/fine-tuning - Stay inference-only
+- ❌ Multi-model systems - Single model bundles only
+- ❌ Cloud deployment - Pure edge focus
+- ❌ Custom architectures - HuggingFace models only
+- ❌ Pruning techniques - Focus on quantization first
+- ❌ Distillation - No training infrastructure
+
+## Example User Journey
 ```bash
-alki bench --bundle dist/qwen3-cpu --compare-models
+# 1. Compare quantization methods
+$ alki compare tinyllama --quick
+> Recommendation: Use AWQ for best balance
+
+# 2. Build with recommended settings  
+$ alki build tinyllama --quantize awq --benchmark
+> ✓ Built successfully
+> 📊 75% smaller, 2.3x faster, 1.8% accuracy loss
+
+# 3. Test inference
+$ alki run dist/tinyllama-awq --prompt "Explain quantum computing"
+> [Fast, quality response]
+
+# 4. Deploy with confidence
+$ scp -r dist/tinyllama-awq pi@raspberrypi:~/models/
+```
+
+## Technical Implementation Notes
+
+### New Module Structure
+```
+src/core/
+├── quantizers/
+│   ├── __init__.py
+│   ├── base_quantizer.py      # Abstract base class
+│   ├── smoothquant.py         # Existing (refactored)
+│   ├── awq_quantizer.py       # New
+│   ├── gptq_quantizer.py      # New
+│   └── quantizer_factory.py   # Method selection
+├── evaluation/
+│   ├── __init__.py
+│   ├── perplexity.py          # Model quality metrics
+│   ├── benchmarker.py         # Performance metrics
+│   └── comparator.py          # Method comparison
+```
+
+### CLI Command Evolution
+```bash
+# Current
+alki build model --quantize --alpha 0.5
+
+# New
+alki build model --quantize [smoothquant|awq|gptq|none] --bits [4|8] --benchmark
+alki compare model --methods [all|smoothquant,awq,gptq]
+alki bench dist/bundle --metrics [perplexity|speed|memory|all]
 ```
 
 ---
 
-## 📋 Phase 1 Completion Tasks
-
-### 4. **OpenVINO Backend Implementation**
-*Status: Stub Only*
-
-**Current**: Empty directory with README only
-**Needed**: 
-- [ ] Create `src/backends/openvino_backend.py`
-- [ ] Implement INT8 calibration workflow
-- [ ] Add OpenVINO execution provider integration
-- [ ] Create Intel CPU/NPU optimization presets
-
-### 5. **Validation Harness** 
-*Status: Not Started*
-
-**Tasks**:
-- [ ] Perplexity calculation vs original model
-- [ ] Automated accuracy regression testing
-- [ ] Performance benchmark standardization
-- [ ] CI integration for model validation
-
----
-
-## 🔮 Phase 2: Advanced Features
-
-### Backend Plugin System
-- [ ] Optimum-Intel integration (replace direct OpenVINO)
-- [ ] Optimum-NVIDIA for TensorRT-LLM
-- [ ] MLX backend for Apple Silicon
-- [ ] ExecuTorch for mobile deployment
-
-### Model Format Extensions  
-- [ ] Local model path support (not just HF Hub)
-- [ ] Custom/fine-tuned model support
-- [ ] Multi-model bundles
-- [ ] Model conversion utilities
-
-### Advanced Quantization
-- [ ] AWQ (Activation-aware Weight Quantization)
-- [ ] GPTQ integration
-- [ ] KV-cache quantization
-- [ ] Dynamic quantization options
-
----
-
-## 🚧 Known Technical Debt
-
-### Code Architecture
-1. **Hard-coded architecture lists** in `onnx_exporter.py` - needs dynamic detection
-2. **Missing error handling** for unsupported models - should gracefully degrade
-3. **Bundle validation** could be more comprehensive
-4. **Test coverage** for real models (vs mocked) - need more E2E tests
-
-### Memory Constraint Handling  
-1. **Large model export limitations** - ✅ **COMPLETED: Memory management system implemented**
-   - ✅ Memory usage monitoring with psutil integration
-   - ✅ Automatic memory threshold detection (warning at 80%, critical at 90%)
-   - ✅ Graceful failure with helpful error messages for oversized models
-   - ✅ Model size estimation based on architecture parameters
-   - ✅ Low memory mode configuration for environment optimization
-   - ✅ Memory-managed operation context managers with cleanup
-   - Issue: Qwen3-0.6B requires custom ONNX config (not natively supported by Optimum) AND significant memory
-   - Current approach: Smart detection prevents OOM crashes, provides actionable feedback
-   - Future enhancements:
-     - External data storage configuration for large tensors
-     - Chunked processing for memory-efficient exports
-
-2. **Custom ONNX configuration framework** - For models not natively supported by Optimum
-   - Need systematic approach for adding custom export configs
-   - Framework for handling architecture-specific export requirements
-   - Memory-aware export strategies
-
-### Documentation  
-1. **Model-specific guides** - Each model may have optimization quirks
-2. **Backend development guide** - How to add new acceleration backends
-3. **Performance tuning guide** - Model-specific quantization parameters
-4. **Memory requirements guide** - System requirements for different model sizes
-
----
-
-## 📊 Success Metrics
-
-**Phase 1 Complete When**:
-- [ ] Qwen3-0.6B fully supported (build → run → bench)
-- [ ] At least 3 edge models validated and documented
-- [x] `alki run` provides acceptable inference experience ✅
-- [ ] Basic benchmarking shows quantization benefits
-
-**Phase 2 Success**:
-- [ ] Multiple backend options available
-- [ ] Optimum integration reduces maintenance burden  
-- [ ] Community contributions for new models/backends
-
----
-
-*Last Updated: September 2025*
-*Next Review: After model support expansion*
+*This focused roadmap positions Alki as THE quantization toolkit for edge AI deployment - simple, powerful, and laser-focused on making small models work great on edge devices.*

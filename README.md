@@ -1,15 +1,15 @@
 # Alki 🌊
 
-**An open-source toolchain for deploying LLMs at the edge.**
+**An open-source toolchain for deploying LLMs at the edge with best-in-class quantization methods.**
 
-Alki takes a Hugging Face model, optimizes it, and produces a self-contained deployment bundle that can run efficiently on edge devices.
+Alki takes a Hugging Face model, applies state-of-the-art quantization (SmoothQuant, AWQ, GPTQ), and produces an optimized deployment bundle that runs efficiently on edge devices.
 
 ## ✨ Goals
 
-* **Simple**: one command to turn a Hugging Face model into an edge-ready bundle.
-* **Flexible**: quantization & optimization built in, with hardware-specific presets.
-* **Portable**: bundles run with minimal dependencies on the target device.
-* **Extensible**: plugin architecture for new backends (TensorRT-LLM, MLX, QNN, etc.).
+* **Simple**: One command from HuggingFace to optimized edge bundle.
+* **Powerful**: Multiple quantization methods (SmoothQuant, AWQ, GPTQ) with built-in benchmarking.
+* **Informed**: Automatic comparison tools help choose optimal settings.
+* **Portable**: Self-contained bundles run on edge devices with minimal dependencies.
 
 ## 🗺️ Roadmap (Phase 1)
 
@@ -57,6 +57,9 @@ python -m src.cli.main list --path dist --verbose
 
 # Runtime inference
 python -m src.cli.main run dist/gpt2-cpu --prompt "Hello from the edge!" --max-tokens 50 --temperature 0.8
+
+# Compare quantization methods (future)
+python -m src.cli.main compare gpt2 --methods all
 ```
 
 ## 🎮 Runtime Inference
@@ -143,9 +146,17 @@ dist/gpt2-cpu/
 
 More presets coming (TensorRT-LLM, MLX, ExecuTorch).
 
-## ⚡ Quantization
+## 🎯 Quantization Methods
 
-Alki uses **SmoothQuant W8A8** for post-training quantization, providing:
+Alki provides multiple state-of-the-art quantization techniques:
+
+- **SmoothQuant**: Balanced approach, good for most models. Provides 74.6% size reduction with <1% accuracy loss.
+- **AWQ**: Activation-aware quantization, often achieves best accuracy preservation *(coming soon)*
+- **GPTQ**: Aggressive compression for smallest model sizes *(coming soon)*
+
+Use `alki compare` to find the best method for your model and hardware *(coming soon)*.
+
+### Current SmoothQuant Features
 
 * **74.6% model size reduction** (622MB → 158MB for GPT-2)
 * **2-4x faster inference** on CPUs with INT8 support

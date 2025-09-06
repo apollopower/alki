@@ -146,14 +146,14 @@ def test_pipeline_with_custom_config(mock_all_dependencies):
         assert export_result["export_config"].use_gpu is True
         assert export_result["export_config"].opset_version == 16
 
-        # Verify GPU provider was requested
+        # Verify CPU provider was used (GPU requests ignored now)
         mock_all_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
             model_id="gpt2",
             export=True,
             use_cache=False,
-            provider="CUDAExecutionProvider",
+            provider="CPUExecutionProvider",
         )
 
 

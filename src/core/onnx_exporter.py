@@ -104,7 +104,7 @@ class OnnxExporter:
                 f"  • Available memory: {available_mb:.1f}MB\n"
                 f"  • Model: {model_id}\n\n"
                 f"💡 Suggestions:\n"
-                f"  • Try a smaller model (e.g., distilgpt2, gpt2)\n"
+                f"  • Try a smaller model\n"
                 f"  • Increase system memory\n"
                 f"  • Use a cloud instance with more RAM"
             )
@@ -139,11 +139,7 @@ class OnnxExporter:
                     "model_id": model_id,
                     "export": True,
                     "use_cache": self.config.use_cache,
-                    "provider": (
-                        ExecutionProviders.CPU
-                        if not self.config.use_gpu
-                        else ExecutionProviders.CUDA
-                    ),
+                    "provider": ExecutionProviders.CPU,  # Only CPU supported now
                 }
 
                 # Note: low_cpu_mem_usage not supported by optimum ONNX export

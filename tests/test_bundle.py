@@ -99,7 +99,7 @@ class TestRuntimeConfig:
     def test_runtime_config_custom_values(self):
         """Test custom runtime configuration."""
         config = RuntimeConfig(
-            provider="OpenVINOExecutionProvider",
+            provider="CPUExecutionProvider",
             opset_version=16,
             use_cache=True,
             is_quantized=True,
@@ -108,7 +108,7 @@ class TestRuntimeConfig:
             weight_type="QInt8",
         )
 
-        assert config.provider == "OpenVINOExecutionProvider"
+        assert config.provider == "CPUExecutionProvider"
         assert config.opset_version == 16
         assert config.use_cache is True
         assert config.is_quantized is True
@@ -117,20 +117,20 @@ class TestRuntimeConfig:
     def test_runtime_config_serialization(self):
         """Test runtime config to/from dict conversion."""
         config = RuntimeConfig(
-            provider="OpenVINOExecutionProvider",
+            provider="CPUExecutionProvider",
             is_quantized=True,
             quantization_format="QDQ",
         )
 
         # Test to_dict
         result = config.to_dict()
-        assert result["provider"] == "OpenVINOExecutionProvider"
+        assert result["provider"] == "CPUExecutionProvider"
         assert result["is_quantized"] is True
         assert result["quantization_format"] == "QDQ"
 
         # Test from_dict
         restored = RuntimeConfig.from_dict(result)
-        assert restored.provider == "OpenVINOExecutionProvider"
+        assert restored.provider == "CPUExecutionProvider"
         assert restored.is_quantized is True
         assert restored.quantization_format == "QDQ"
 

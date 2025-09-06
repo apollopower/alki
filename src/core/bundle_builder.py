@@ -29,7 +29,6 @@ from .constants import (
     ExecutionProviders,
     QuantizationMethods,
     QuantizationFormats,
-    Targets,
     FileSizes,
 )
 
@@ -344,16 +343,8 @@ class BundleBuilder:
 
     def _determine_execution_provider(self, target: str, export_config) -> str:
         """Determine the appropriate execution provider for the target."""
-        if target == Targets.OPENVINO:
-            return ExecutionProviders.OPENVINO
-        elif (
-            export_config
-            and hasattr(export_config, "use_gpu")
-            and export_config.use_gpu
-        ):
-            return ExecutionProviders.CUDA
-        else:
-            return ExecutionProviders.CPU
+        # Simplified: only CPU support for now
+        return ExecutionProviders.CPU
 
     def _extract_model_info(
         self, export_config, onnx_artifacts: Dict[str, Any]

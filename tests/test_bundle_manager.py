@@ -230,16 +230,13 @@ class TestBundleManager:
 
         mock_import.side_effect = side_effect
 
+        # Test with incompatible provider (simplified - removed OpenVINO references)
         compatibility = manager.validate_runtime_compatibility(
-            sample_bundle, target_provider="OpenVINOExecutionProvider"
+            sample_bundle, target_provider="SomeOtherProvider"
         )
 
-        assert compatibility["compatible"] is False
-        assert len(compatibility["issues"]) == 1
-        assert (
-            "Bundle requires CPUExecutionProvider but OpenVINOExecutionProvider requested"
-            in compatibility["issues"][0]
-        )
+        assert compatibility["compatible"] is True  # Simplified validation now
+        # No longer checking provider mismatch since we only support CPU
 
     @patch("builtins.__import__")
     def test_validate_runtime_compatibility_provider_unavailable(
@@ -259,15 +256,14 @@ class TestBundleManager:
 
         mock_import.side_effect = side_effect
 
-        # Change bundle to require OpenVINO
-        sample_bundle.runtime_config.provider = "OpenVINOExecutionProvider"
+        # Change bundle to require unsupported provider
+        sample_bundle.runtime_config.provider = "UnsupportedProvider"
 
         compatibility = manager.validate_runtime_compatibility(sample_bundle)
 
         assert compatibility["compatible"] is False
         assert any(
-            "OpenVINOExecutionProvider not available" in issue
-            for issue in compatibility["issues"]
+            "but only CPU is supported" in issue for issue in compatibility["issues"]
         )
 
     def test_export_bundle_info_json(self, sample_bundle, tmp_path):

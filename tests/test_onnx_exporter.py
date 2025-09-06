@@ -109,9 +109,9 @@ def test_export_successful_cpu(mock_onnx_dependencies, mock_model_artifacts):
         mock_onnx_dependencies["onnx"].checker.check_model.assert_called_once()
 
 
-def test_export_successful_gpu(mock_onnx_dependencies, mock_model_artifacts):
-    """Test successful ONNX export with GPU provider."""
-    config = OnnxExportConfig(use_gpu=True)
+def test_export_cpu_only_config(mock_onnx_dependencies, mock_model_artifacts):
+    """Test ONNX export - only CPU supported now."""
+    config = OnnxExportConfig(use_gpu=True)  # GPU config ignored
     exporter = OnnxExporter(config)
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -119,14 +119,14 @@ def test_export_successful_gpu(mock_onnx_dependencies, mock_model_artifacts):
 
         exporter.export(mock_model_artifacts, output_path)
 
-        # Verify GPU provider was used
+        # Verify CPU provider was used (GPU option ignored)
         mock_onnx_dependencies[
             "ort_model_class"
         ].from_pretrained.assert_called_once_with(
             model_id="gpt2",
             export=True,
             use_cache=False,
-            provider="CUDAExecutionProvider",
+            provider="CPUExecutionProvider",
         )
 
 
