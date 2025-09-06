@@ -52,7 +52,9 @@ class GGUFValidator:
         self.test_prompt = test_prompt
         self.loader = LlamaCppModelLoader()
 
-    def validate_file(self, model_path: str, max_tokens: int = 20) -> ValidationResult:
+    def validate_file(
+        self, model_path: str, max_tokens: int = 20, n_ctx: int = 512
+    ) -> ValidationResult:
         """
         Validate a GGUF model file
 
@@ -85,7 +87,7 @@ class GGUFValidator:
             # Load model directly from file path
             from llama_cpp import Llama
 
-            model = Llama(model_path=model_path, verbose=False)
+            model = Llama(model_path=model_path, verbose=False, n_ctx=n_ctx)
 
             load_time = (time.time() - load_start) * 1000
             logger.debug(f"Model loaded in {load_time:.1f}ms")
@@ -143,7 +145,7 @@ class GGUFValidator:
             )
 
     def validate_huggingface(
-        self, repo_id: str, filename: str, max_tokens: int = 20
+        self, repo_id: str, filename: str, max_tokens: int = 20, n_ctx: int = 512
     ) -> ValidationResult:
         """
         Validate a GGUF model from HuggingFace Hub
@@ -166,7 +168,7 @@ class GGUFValidator:
             load_start = time.time()
 
             model = self.loader.prepareFromHuggingFace(
-                repo_id=repo_id, filename=filename, verbose=False
+                repo_id=repo_id, filename=filename, verbose=False, n_ctx=n_ctx
             )
 
             load_time = (time.time() - load_start) * 1000
@@ -295,7 +297,12 @@ class GGUFValidator:
             return False
 
     def validate_and_cleanup(
-        self, repo_id: str, filename: str, max_tokens: int = 20, cleanup: bool = True
+        self,
+        repo_id: str,
+        filename: str,
+        max_tokens: int = 20,
+        cleanup: bool = True,
+        n_ctx: int = 512,
     ) -> ValidationResult:
         """Validate a GGUF model and optionally clean up cache afterward.
 
@@ -309,7 +316,7 @@ class GGUFValidator:
             ValidationResult with test results
         """
         # Perform validation
-        result = self.validate_huggingface(repo_id, filename, max_tokens)
+        result = self.validate_huggingface(repo_id, filename, max_tokens, n_ctx)
 
         # Add repo_id to result for cleanup tracking
         result.repo_id = repo_id

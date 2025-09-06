@@ -11,7 +11,7 @@ class LlamaCppModelLoader:
     """Downloads and prepares models for conversion using llama.cpp"""
 
     def prepareFromHuggingFace(
-        self, repo_id: str, filename: str, verbose: bool
+        self, repo_id: str, filename: str, verbose: bool, n_ctx: int = 512
     ) -> Llama:
         """
         Download model and prepare metadata
@@ -22,6 +22,7 @@ class LlamaCppModelLoader:
             repo_id=repo_id,
             filename=filename,
             verbose=verbose,
+            n_ctx=n_ctx,
         )
 
         logger.info(f"Loaded Llama model with {model.n_ctx} context length")

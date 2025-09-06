@@ -29,7 +29,19 @@ app = typer.Typer(
 )
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """
+    Alki 🌊 - Edge LLM deployment toolchain
+
+    A toolchain for deploying LLMs at the edge with validation, optimization, and packaging capabilities.
+    """
+    if ctx.invoked_subcommand is None:
+        typer.echo("Use 'alki --help' to see available commands.")
+        raise typer.Exit(0)
+
+
+@app.command("validate")
 def validate(
     model: str = typer.Argument(
         help="GGUF model file path or HuggingFace repo ID (e.g., 'Qwen/Qwen3-0.6B-GGUF')"
@@ -41,10 +53,10 @@ def validate(
         help="Filename pattern for HuggingFace GGUF models (e.g., '*q8_0.gguf')",
     ),
     max_tokens: int = typer.Option(
-        20, "--max-tokens", help="Maximum tokens for inference test"
+        50, "--max-tokens", help="Maximum tokens for inference test"
     ),
     prompt: str = typer.Option(
-        "Hello, how are you?",
+        "Here is an introduction to Alki Beach in Seattle.",
         "--prompt",
         "-p",
         help="Test prompt for inference validation",
@@ -56,6 +68,12 @@ def validate(
         False,
         "--no-cleanup",
         help="Skip cache cleanup after validation (HuggingFace models only)",
+    ),
+    context_size: int = typer.Option(
+        512,
+        "--context-size",
+        "-c",
+        help="Context window size in tokens (default: 512, max depends on model)",
     ),
 ):
     """
@@ -75,7 +93,9 @@ def validate(
     # Determine if this is a file path or HuggingFace repo
     if Path(model).exists() and filename is None:
         # Local file validation
-        result = validator.validate_file(model, max_tokens=max_tokens)
+        result = validator.validate_file(
+            model, max_tokens=max_tokens, n_ctx=context_size
+        )
     elif filename is not None:
         # HuggingFace repo validation with optional cleanup
         result = validator.validate_and_cleanup(
@@ -83,6 +103,7 @@ def validate(
             filename=filename,
             max_tokens=max_tokens,
             cleanup=not no_cleanup,
+            n_ctx=context_size,
         )
     else:
         typer.echo(
