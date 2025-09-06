@@ -1,6 +1,6 @@
 # Contributing to Alki 🌊
 
-Thank you for your interest in contributing to **Alki**, an open-source tool for deploying LLMs at the edge. This project is at an early stage, and contributions of all kinds are welcome — from code and documentation to testing and discussions.
+Thank you for your interest in contributing to **Alki**, an open-source toolchain for deploying LLMs at the edge with llama.cpp. This project is focused on production-ready edge deployments, and contributions of all kinds are welcome — from code and documentation to testing and discussions.
 
 ## 📋 Code of Conduct
 
@@ -49,17 +49,17 @@ make format        # Format code with black
 make lint          # Lint with ruff
 make clean         # Clean cache files
 
-# Test real ONNX export with actual models (optional, not part of CI)
-python scripts/test_onnx_export_e2e.py --model distilgpt2
+# Test end-to-end packing pipeline with real models (optional, not part of CI)
+python scripts/test_pack_e2e.py
 
-# Test end-to-end quantization pipeline (optional, takes ~2 minutes)
-python scripts/test_quantization_e2e.py
+# Test with different models and quantization profiles
+python scripts/test_pack_e2e.py --model Qwen/Qwen3-0.6B-Instruct --quant Q4_K_M,Q5_K_M
 
-# Test with different models and memory options
-python scripts/test_quantization_e2e.py --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --low-memory --calibration-samples 8
+# Test container image generation
+python scripts/test_image_build.py
 
 # Test runtime inference with created bundles
-python -m src.cli.main run dist/gpt2-cpu --prompt "Test inference" --max-tokens 50 --verbose
+llama-server -m ./dist/qwen3-0.6b/models/qwen3-0_6b-instruct-q4_k_m.gguf --api --host 0.0.0.0 --port 8080
 ```
 
 **Pre-push checklist:**
@@ -73,58 +73,62 @@ python -m src.cli.main run dist/gpt2-cpu --prompt "Test inference" --max-tokens 
 ```
 alki/
   cli/              # CLI commands (Typer)
-  core/             # ingest, quantize, package
-  backends/         # backend plugins (ORT GenAI, OpenVINO, etc.)
-  runtime/          # runners, kv-cache helpers
-  validate/         # accuracy & perf harness
-  presets/          # built-in configs
-  examples/         # model recipes
-docker/             # optional builder Dockerfiles
+  core/             # HF→GGUF conversion, bundle packaging
+  backends/         # runtime plugins (llama.cpp, Ollama, MLC, ONNX)
+  converters/       # GGUF conversion and quantization
+  deploy/           # deployment recipe generators
+  validate/         # bundle validation & smoke tests
+  examples/         # model recipes and deployment configs
+docker/             # container templates and Dockerfiles
 tests/              # pytest suite
 ```
 
 ## 🚀 Ways to Contribute
 
-Alki is focused on providing the best quantization methods for edge deployment. Contributions are especially welcome around:
+Alki is focused on production-ready LLM deployment at the edge with llama.cpp. Contributions are especially welcome around:
 
-* **Quantization methods**: New quantization techniques (AWQ, GPTQ, etc.)
-* **Benchmarking**: Validation tools and performance measurement
-* **Hardware optimization**: Device-specific optimization profiles  
-* **Model support**: Testing with new model architectures
-* **Documentation**: Tutorials, guides, and clarifications
-* **Testing**: Run models on your edge hardware and report results
+* **Runtime backends**: Additional backends (Ollama, MLC-LLM, TensorRT-LLM)
+* **Deployment targets**: Platform support (Jetson, Apple MLX, Android QNN, WebAssembly)
+* **Fleet management**: A/B deployment tools and control planes
+* **Benchmarking**: Validation frameworks and performance measurement
+* **Model support**: Testing with new GGUF-compatible architectures
+* **Documentation**: Deployment guides, tutorials, and best practices
+* **Security**: Compliance features, signed manifests, SBOM generation
 
-## Contributing Quantization Methods
+## Contributing Runtime Backends
 
-Alki's core value is providing the best quantization options. When contributing new methods:
+Alki's core value is providing flexible deployment options through runtime backends. When contributing new backends:
 
-1. **Implement the BaseQuantizer interface** (see `src/core/quantizers/base_quantizer.py`)
-2. **Add comprehensive tests** including perplexity evaluation vs baseline
-3. **Include benchmarks** comparing to existing methods (speed, size, accuracy)
-4. **Document optimal use cases** and limitations in your method
-5. **Update the comparison tool** to include your method
-6. **Provide example usage** in CLI and documentation
+1. **Implement the BaseRuntime interface** (see `src/backends/base_runtime.py`)
+2. **Add comprehensive tests** including bundle loading and inference validation
+3. **Include benchmarks** comparing to existing backends (speed, memory, compatibility)
+4. **Document optimal use cases** and hardware requirements for your backend
+5. **Update the CLI** to support your backend selection
+6. **Provide deployment examples** in documentation
 
-See `src/core/quantizers/` for examples of proper quantizer implementation.
+See `src/backends/` for examples of proper backend implementation.
 
-### Quantization Method Guidelines
+### Runtime Backend Guidelines
 
-- Focus on **post-training quantization** (no fine-tuning/retraining)
-- Target **edge deployment** scenarios (memory/compute constrained)
-- Prioritize **practical applicability** over theoretical perfection
-- Include **hardware considerations** (CPU/GPU/NPU acceleration)
-- Measure **real-world performance** on actual edge devices
+- Focus on **production readiness** (reliability, performance, monitoring)
+- Target **edge deployment** scenarios (resource constraints, offline capability)
+- Prioritize **standards compliance** (OpenAI API compatibility where possible)
+- Include **hardware acceleration** support (GPU, NPU, specialized chips)
+- Measure **real-world performance** on target edge devices
 
 ## 🔌 Backend Plugins
 
-Each backend (e.g. `ort_genai`, `trt_llm`, `mlx_exec`) is a self-contained module that exposes:
+Each backend (e.g. `llama_cpp`, `ollama`, `mlc_llm`, `onnx_runtime`) is a self-contained module that exposes:
 
 ```python
-def prepare(model_ir, config) -> Bundle:
-    """Compile/quantize/convert the model and return a Bundle."""
+def serve(bundle_path, config) -> Runtime:
+    """Load a GGUF bundle and return a Runtime instance for inference."""
+
+def containerize(bundle_path, config) -> DockerImage:
+    """Generate container image for the bundle with this runtime."""
 ```
 
-This makes it easy to add new hardware targets without touching the core framework.
+This makes it easy to add new runtime targets without touching the core framework.
 
 ## 🧪 Validation
 
@@ -134,18 +138,18 @@ All contributions should include:
 * **Integration test** for at least one model (e.g., GPT-2 with W8A8 quant on CPU)
 * **Benchmark logs** (optional, but encouraged for backend contributions)
 
-### Quantization Testing
+### GGUF Conversion Testing
 
-The project includes SmoothQuant W8A8 quantization with comprehensive testing:
+The project includes comprehensive GGUF conversion and quantization testing:
 
-* **Unit tests**: `pytest tests/test_quantizer.py` (fast, <5 seconds)
-* **End-to-end test**: `python scripts/test_quantization_e2e.py` (slower, ~2 minutes)
-* **Quick demo**: `python scripts/demo_quantization.py` (no model download needed)
+* **Unit tests**: `pytest tests/test_converter.py` (fast, <5 seconds)
+* **End-to-end test**: `python scripts/test_pack_e2e.py` (slower, ~2 minutes)
+* **Quick demo**: `python scripts/demo_gguf_pipeline.py` (shows conversion process)
 
-When contributing quantization-related changes:
-- Ensure unit tests pass for configuration validation and smoothing calculations
+When contributing conversion-related changes:
+- Ensure unit tests pass for HF→GGUF conversion validation
 - Run the end-to-end test to verify compatibility with real models
-- Test with different alpha values (0.0, 0.5, 1.0) to verify smoothing behavior
+- Test with different quantization profiles (Q4_K_M, Q5_K_M, Q8_0) to verify output quality
 
 ### Runtime Testing
 
@@ -164,22 +168,23 @@ When contributing runtime-related changes:
 **Example runtime testing workflow**:
 ```bash
 # Create a test bundle first
-python -m src.cli.main build gpt2 --output dist --target cpu
+alki pack --hf "Qwen/Qwen3-0.6B-Instruct" --quant "Q4_K_M" --out ./dist/qwen3-0.6b
 
-# Test basic inference
-python -m src.cli.main run dist/gpt2-cpu --prompt "Hello world" --max-tokens 20
+# Validate the bundle
+alki validate --bundle ./dist/qwen3-0.6b
 
-# Test with different parameters
-python -m src.cli.main run dist/gpt2-cpu \
-  --prompt "Explain machine learning" \
-  --max-tokens 100 \
-  --temperature 0.8 \
-  --top-p 0.95 \
-  --verbose
+# Test basic inference with llama-server
+llama-server -m ./dist/qwen3-0.6b/models/qwen3-0_6b-instruct-q4_k_m.gguf \
+  --api --host 0.0.0.0 --port 8080 --ctx-size 4096
 
-# Test with quantized models
-python -m src.cli.main build gpt2 --output dist --target cpu --preset balanced
-python -m src.cli.main run dist/gpt2-cpu --prompt "Test quantized inference"
+# Test with curl
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3-0.6b-instruct", "messages": [{"role": "user", "content": "Hello!"}]}'
+
+# Test container build
+alki image build --bundle ./dist/qwen3-0.6b --runtime llama.cpp --tag test/qwen3:Q4
+docker run -p 8080:8080 test/qwen3:Q4
 ```
 
 ## 📜 License
