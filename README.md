@@ -35,10 +35,9 @@ alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --context-size 2048
 
 ## 🗺️ Roadmap (Phase 1)
 
-* [ ] Model ingestion (HF → GGUF conversion)
-* [ ] GGUF quantization (Q4_K_M, Q5_K_M, Q8_0)
-* [ ] Bundle format (manifests + GGUF models + deployment configs)
-* [🔶] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`) - *validate command implemented*
+* [x] Model ingestion (HF → GGUF conversion)
+* [x] Bundle format (manifests + GGUF models + deployment configs)
+* [🔶] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`) - *validate and pack commands implemented*
 * [🔶] llama.cpp runtime integration - *GGUF model loading implemented*
 * [ ] Container image generation with llama-server
 * [ ] Deployment recipes (systemd, k3s, Nomad)
@@ -50,6 +49,7 @@ alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --context-size 2048
   * [ ] Ollama integration (auto-generate Modelfile)
   * [ ] MLC-LLM support (TVM packages)
   * [ ] ONNX Runtime option (backward compatibility)
+  * [ ] Manual quantization methods (Q4_K_M, Q5_K_M, Q8_0)
 * [ ] Fleet management and A/B deployment tools
 
 ## 🚀 Quickstart
