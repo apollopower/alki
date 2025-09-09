@@ -16,6 +16,9 @@ from dataclasses import dataclass, asdict
 
 logger = logging.getLogger(__name__)
 
+# Constants
+HASH_CHUNK_SIZE = 8192  # Bytes to read at a time for hash calculation
+
 
 @dataclass
 class BundleArtifact:
@@ -65,17 +68,32 @@ class Bundle:
 
         Args:
             output_dir: Base output directory for bundle
-            name: Bundle name
+            name: Bundle name (will be sanitized for consistency)
             version: Bundle version (auto-generated if not provided)
         """
-        self.name = name
+        self.name = self._sanitize_name(name)
         self.version = version or self._generate_version()
-        self.bundle_dir = output_dir / name
+        self.bundle_dir = output_dir / self.name
         self.models_dir = self.bundle_dir / "models"
         self.metadata_dir = self.bundle_dir / "metadata"
         self.deploy_dir = self.bundle_dir / "deploy"
 
         logger.info(f"Initializing bundle: {self.name} v{self.version}")
+
+    def _sanitize_name(self, name: str) -> str:
+        """
+        Sanitize a name for use as a bundle name.
+
+        Converts to lowercase and replaces underscores and dots with hyphens
+        for consistent, URL-safe bundle names.
+
+        Args:
+            name: Raw name to sanitize
+
+        Returns:
+            Sanitized bundle name
+        """
+        return name.lower().replace("_", "-").replace(".", "-")
 
     def _generate_version(self) -> str:
         """Generate version string based on current date"""
@@ -145,7 +163,7 @@ class Bundle:
         sha256 = hashlib.sha256()
         with open(file_path, "rb") as f:
             # Read in chunks to handle large files
-            for chunk in iter(lambda: f.read(8192), b""):
+            for chunk in iter(lambda: f.read(HASH_CHUNK_SIZE), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
 

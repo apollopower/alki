@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
+from llama_cpp import Llama
+
 logger = logging.getLogger(__name__)
 
 
@@ -190,8 +192,6 @@ class ManifestGenerator:
             Dictionary of model capabilities or None if extraction fails
         """
         try:
-            from llama_cpp import Llama
-
             # Load model with minimal resources just to extract metadata
             model = Llama(
                 model_path=str(model_path),

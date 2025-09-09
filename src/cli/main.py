@@ -161,10 +161,10 @@ def pack(
         help="Quantization profile (default: Q4_K_M)",
     ),
     context_size: int = typer.Option(
-        512,
+        2048,
         "--context-size",
         "-c",
-        help="Context window size in tokens (default: 512, extracted from model if available)",
+        help="Context window size in tokens (default: 2048, extracted from model if available)",
     ),
     no_validate: bool = typer.Option(
         False,
@@ -203,10 +203,10 @@ def pack(
     # Derive bundle name from model if not provided
     if not name:
         if model_path:
-            name = model_path.stem.lower().replace("_", "-").replace(".", "-")
+            name = model_path.stem
         else:
             # For HuggingFace repos, use the model part of the repo ID
-            name = model.split("/")[-1].lower().replace("_", "-").replace(".", "-")
+            name = model.split("/")[-1]
 
     typer.echo(f"Bundle name: {name}")
     typer.echo(f"Output directory: {output_dir}")

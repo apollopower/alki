@@ -25,6 +25,23 @@ class TestBundle:
             assert bundle.version is not None
             assert bundle.bundle_dir == Path(tmpdir) / "test-model"
 
+    def test_bundle_name_sanitization(self):
+        """Test bundle name sanitization"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Test various name formats that should be sanitized
+            test_cases = [
+                ("Test_Model.gguf", "test-model-gguf"),
+                ("QWEN_3.0.6B", "qwen-3-0-6b"),
+                ("my_model.Q4_K_M", "my-model-q4-k-m"),
+                ("Model.Name.With.Dots", "model-name-with-dots"),
+                ("simple", "simple"),
+            ]
+
+            for input_name, expected_name in test_cases:
+                bundle = Bundle(Path(tmpdir), input_name)
+                assert bundle.name == expected_name
+                assert bundle.bundle_dir == Path(tmpdir) / expected_name
+
     def test_bundle_structure_creation(self):
         """Test creation of bundle directory structure"""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -247,7 +264,7 @@ class TestManifestGenerator:
         assert len(sbom["packages"]) == 2  # bundle + llama.cpp
         assert len(sbom["relationships"]) == 2
 
-    @patch("llama_cpp.Llama")
+    @patch("src.core.manifest.Llama")
     def test_extract_model_capabilities(self, mock_llama):
         """Test model capability extraction"""
         # Mock the Llama model
