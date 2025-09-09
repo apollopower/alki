@@ -17,7 +17,10 @@ from dataclasses import dataclass, asdict
 logger = logging.getLogger(__name__)
 
 # Constants
-HASH_CHUNK_SIZE = 8192  # Bytes to read at a time for hash calculation
+HASH_CHUNK_SIZE = 262144  # 256KB chunks for efficient processing of large model files
+DEFAULT_CONTEXT_SIZE = (
+    4096  # Default context size for runtime manifest when not specified
+)
 
 
 @dataclass
@@ -219,6 +222,7 @@ class Bundle:
         host: str = "0.0.0.0",
         port: int = 8080,
         api: bool = True,
+        context_size: int = DEFAULT_CONTEXT_SIZE,
     ) -> Dict[str, Any]:
         """
         Create runtime configuration manifest
@@ -228,6 +232,7 @@ class Bundle:
             host: Server host
             port: Server port
             api: Enable API mode
+            context_size: Context window size (defaults to DEFAULT_CONTEXT_SIZE)
 
         Returns:
             Runtime manifest dictionary
@@ -235,7 +240,7 @@ class Bundle:
         runtime_manifest = {
             "runtime": runtime,
             "server": {"host": host, "port": port, "api": api},
-            "args": {"ctx": 4096, "threads": "auto", "ngl": 0},
+            "args": {"ctx": context_size, "threads": "auto", "ngl": 0},
             "health": {"path": "/v1/models", "timeout_s": 5},
         }
 

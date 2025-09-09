@@ -191,6 +191,7 @@ class ManifestGenerator:
         Returns:
             Dictionary of model capabilities or None if extraction fails
         """
+        model = None
         try:
             # Load model with minimal resources just to extract metadata
             model = Llama(
@@ -206,9 +207,6 @@ class ManifestGenerator:
                 "embedding_size": model.n_embd(),
             }
 
-            # Clean up
-            del model
-
             logger.info(
                 f"Extracted capabilities from {model_path.name}: ctx={capabilities['context_length']}"
             )
@@ -217,6 +215,9 @@ class ManifestGenerator:
         except Exception as e:
             logger.error(f"Failed to extract model capabilities: {e}")
             return None
+        finally:
+            if model is not None:
+                del model
 
     def create_deployment_placeholder(
         self,

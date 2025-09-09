@@ -287,9 +287,12 @@ def pack(
             "vocab_size": validation_result.vocab_size,
             "embedding_size": validation_result.embedding_size,
         }
-        # Use extracted context length if it's larger than our CLI parameter
-        actual_context = max(
-            context_size, validation_result.context_length or context_size
+        # Use extracted context length if it's available and larger than our CLI parameter
+        model_context = validation_result.context_length
+        actual_context = (
+            max(context_size, model_context)
+            if model_context is not None
+            else context_size
         )
     else:
         # Extract capabilities using ManifestGenerator (fallback)
@@ -300,9 +303,12 @@ def pack(
         if capabilities:
             typer.echo(f"  Context length: {capabilities['context_length']}")
             typer.echo(f"  Vocabulary size: {capabilities['vocab_size']}")
-            # Use extracted context length if it's larger than our CLI parameter
-            actual_context = max(
-                context_size, capabilities.get("context_length", context_size)
+            # Use extracted context length if it's available and larger than our CLI parameter
+            model_context = capabilities.get("context_length")
+            actual_context = (
+                max(context_size, model_context)
+                if model_context is not None
+                else context_size
             )
         else:
             typer.echo("⚠️  Could not extract model capabilities, using CLI defaults")
