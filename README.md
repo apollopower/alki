@@ -36,8 +36,8 @@ alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --context-size 2048
 ## 🗺️ Roadmap (Phase 1)
 
 * [x] Model ingestion (HF → GGUF conversion)
-* [ ] Bundle format (manifests + GGUF models + deployment configs)
-* [🔶] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`) - *validate command implemented*
+* [x] Bundle format (manifests + GGUF models + deployment configs)
+* [🔶] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`) - *validate and pack commands implemented*
 * [🔶] llama.cpp runtime integration - *GGUF model loading implemented*
 * [ ] Container image generation with llama-server
 * [ ] Deployment recipes (systemd, k3s, Nomad)

@@ -12,9 +12,15 @@ from pathlib import Path
 
 try:
     from ..core.validator import GGUFValidator
+    from ..core.bundle import Bundle
+    from ..core.manifest import ManifestGenerator, ModelInfo
+    from ..core.model_loader import LlamaCppModelLoader
 except ImportError:
     # Handle case when running as a script
     from core.validator import GGUFValidator
+    from core.bundle import Bundle
+    from core.manifest import ManifestGenerator, ModelInfo
+    from core.model_loader import LlamaCppModelLoader
 
 # Configure logging
 logging.basicConfig(
@@ -123,3 +129,278 @@ def validate(
     else:
         typer.echo("\n❌ Validation failed!")
         raise typer.Exit(1)
+
+
+@app.command("pack")
+def pack(
+    model: str = typer.Argument(
+        help="GGUF model file path or HuggingFace repo ID (e.g., 'Qwen/Qwen3-0.6B-GGUF')"
+    ),
+    filename: Optional[str] = typer.Option(
+        None,
+        "--filename",
+        "-f",
+        help="Filename pattern for HuggingFace GGUF models (e.g., '*q8_0.gguf')",
+    ),
+    out: str = typer.Option(
+        "./dist",
+        "--out",
+        "-o",
+        help="Output directory for bundle (default: ./dist)",
+    ),
+    name: Optional[str] = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Bundle name (derived from model if not provided)",
+    ),
+    quant: str = typer.Option(
+        "Q4_K_M",
+        "--quant",
+        "-q",
+        help="Quantization profile (default: Q4_K_M)",
+    ),
+    context_size: int = typer.Option(
+        512,
+        "--context-size",
+        "-c",
+        help="Context window size in tokens (default: 512, extracted from model if available)",
+    ),
+    no_validate: bool = typer.Option(
+        False,
+        "--no-validate",
+        help="Skip model validation before packing",
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+    no_cleanup: bool = typer.Option(
+        False,
+        "--no-cleanup",
+        help="Skip cache cleanup after packing (HuggingFace models only)",
+    ),
+):
+    """
+    Create a deployment bundle from a GGUF model.
+
+    This command validates the model (unless skipped), extracts its capabilities,
+    and creates a complete deployment bundle with manifests, deployment configs,
+    and documentation.
+
+    Examples:
+        alki pack /path/to/model.gguf --out ./bundles
+        alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --name qwen3-0.6b
+        alki pack "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" --quant Q5_K_M
+    """
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    typer.echo("🌊 Alki Pack - Creating deployment bundle...")
+
+    output_dir = Path(out)
+    model_path = Path(model) if Path(model).exists() else None
+
+    # Derive bundle name from model if not provided
+    if not name:
+        if model_path:
+            name = model_path.stem.lower().replace("_", "-").replace(".", "-")
+        else:
+            # For HuggingFace repos, use the model part of the repo ID
+            name = model.split("/")[-1].lower().replace("_", "-").replace(".", "-")
+
+    typer.echo(f"Bundle name: {name}")
+    typer.echo(f"Output directory: {output_dir}")
+
+    # Step 1: Validate model and get capabilities using our existing validator
+    validator = GGUFValidator()
+    validation_result = None
+
+    if not no_validate:
+        typer.echo("🔍 Validating model and extracting capabilities...")
+
+        try:
+            # Use our existing validation infrastructure
+            if model_path and model_path.exists():
+                # Local file validation
+                validation_result = validator.validate_file(
+                    str(model_path),
+                    max_tokens=10,  # Quick validation test
+                    n_ctx=context_size,
+                )
+            elif filename is not None:
+                # HuggingFace repo validation with optional cleanup
+                validation_result = validator.validate_and_cleanup(
+                    repo_id=model,
+                    filename=filename,
+                    max_tokens=10,  # Quick validation test
+                    cleanup=not no_cleanup,
+                    n_ctx=context_size,
+                )
+            else:
+                typer.echo(
+                    "Error: For HuggingFace repos, you must specify --filename. "
+                    "For local files, ensure the file exists.",
+                    err=True,
+                )
+                raise typer.Exit(1)
+
+            if not validation_result.passed:
+                typer.echo(
+                    f"❌ Model validation failed: {validation_result.error}", err=True
+                )
+                raise typer.Exit(1)
+
+            typer.echo("✅ Model validation passed")
+            typer.echo(f"  Context length: {validation_result.context_length}")
+            typer.echo(f"  Vocabulary size: {validation_result.vocab_size:,}")
+            typer.echo(f"  Embedding size: {validation_result.embedding_size}")
+
+        except Exception as e:
+            typer.echo(f"❌ Validation error: {e}", err=True)
+            raise typer.Exit(1)
+
+    # Step 2: Determine model file path and capabilities
+    if model_path and model_path.exists():
+        # Local file
+        final_model_path = model_path
+    else:
+        # For HuggingFace models, we need to get the model path from the loader
+        # The validation process already downloaded it, but we need to get the path
+        try:
+            typer.echo(f"📥 Preparing model from HuggingFace: {model}")
+            loader = LlamaCppModelLoader()
+            # This will reuse the cached download from validation
+            model_obj = loader.prepareFromHuggingFace(
+                repo_id=model, filename=filename, verbose=verbose, n_ctx=context_size
+            )
+            # Extract the model path from the llama-cpp model object
+            final_model_path = Path(model_obj.model_path)
+        except Exception as e:
+            typer.echo(f"❌ Failed to prepare model: {e}", err=True)
+            raise typer.Exit(1)
+
+    # Step 3: Use validation results for capabilities or extract them
+    if validation_result and not no_validate:
+        # Use capabilities from validation
+        capabilities = {
+            "context_length": validation_result.context_length,
+            "vocab_size": validation_result.vocab_size,
+            "embedding_size": validation_result.embedding_size,
+        }
+        # Use extracted context length if it's larger than our CLI parameter
+        actual_context = max(
+            context_size, validation_result.context_length or context_size
+        )
+    else:
+        # Extract capabilities using ManifestGenerator (fallback)
+        typer.echo("🔍 Extracting model capabilities...")
+        generator = ManifestGenerator()
+        capabilities = generator.extract_model_capabilities(final_model_path)
+
+        if capabilities:
+            typer.echo(f"  Context length: {capabilities['context_length']}")
+            typer.echo(f"  Vocabulary size: {capabilities['vocab_size']}")
+            # Use extracted context length if it's larger than our CLI parameter
+            actual_context = max(
+                context_size, capabilities.get("context_length", context_size)
+            )
+        else:
+            typer.echo("⚠️  Could not extract model capabilities, using CLI defaults")
+            capabilities = {"context_length": context_size}
+            actual_context = context_size
+
+    # Step 4: Create bundle
+    typer.echo("📦 Creating bundle structure...")
+    bundle = Bundle(output_dir, name)
+    bundle.create_structure()
+
+    # Step 5: Add model to bundle
+    typer.echo("➕ Adding model to bundle...")
+    try:
+        artifact = bundle.add_model(final_model_path, quant)
+        typer.echo(f"  Added: {artifact.filename} ({artifact.size:,} bytes)")
+    except Exception as e:
+        typer.echo(f"❌ Failed to add model to bundle: {e}", err=True)
+        raise typer.Exit(1)
+
+    # Step 6: Create model info and manifests
+    typer.echo("📝 Generating manifests...")
+
+    model_info = ModelInfo(
+        architecture="GGUF",
+        context_length=capabilities.get("context_length"),
+        vocab_size=capabilities.get("vocab_size"),
+        embedding_size=capabilities.get("embedding_size"),
+        license="Check original model",
+    )
+
+    # Detect chat template
+    generator = ManifestGenerator()
+    chat_template = generator.detect_chat_template(name)
+    typer.echo(f"  Chat template: {chat_template}")
+
+    # Create manifests
+    bundle.create_manifest(
+        artifacts=[artifact],
+        template=chat_template,
+        license=model_info.license,
+        source_model=final_model_path.name,
+        context_size=actual_context,
+    )
+
+    bundle.create_runtime_manifest()
+    bundle.create_sbom()
+
+    # Step 7: Add documentation
+    typer.echo("📄 Creating documentation...")
+    bundle.add_readme(name, [quant])
+    bundle.add_license(
+        "Please add the appropriate license for your model.\n"
+        "Check the original model repository for license information."
+    )
+
+    # Step 8: Create deployment configs
+    typer.echo("🚀 Creating deployment configurations...")
+
+    model_filename = f"{name}-{quant.lower()}.gguf"
+
+    # Systemd service
+    systemd_config = generator.create_deployment_placeholder(
+        "systemd", name, model_filename, actual_context, chat_template
+    )
+    (bundle.deploy_dir / "systemd" / f"alki-{name}.service").write_text(systemd_config)
+
+    # Docker
+    docker_config = generator.create_deployment_placeholder(
+        "docker", name, model_filename, actual_context, chat_template
+    )
+    (bundle.deploy_dir / "docker" / "Dockerfile").write_text(docker_config)
+
+    # Step 9: Verify bundle
+    typer.echo("🔍 Verifying bundle integrity...")
+    if bundle.verify_bundle():
+        typer.echo("✅ Bundle verification passed")
+    else:
+        typer.echo("❌ Bundle verification failed", err=True)
+        raise typer.Exit(1)
+
+    # Step 10: Show bundle info
+    info = bundle.get_info()
+    typer.echo("\n🎉 Bundle created successfully!")
+    typer.echo(f"  Name: {info['name']}")
+    typer.echo(f"  Version: {info['version']}")
+    typer.echo(f"  Location: {info['location']}")
+    typer.echo(f"  Total size: {info['total_size_mb']:.1f} MB")
+
+    typer.echo("\n🚀 To deploy with llama-server:")
+    typer.echo(f"  llama-server -m {bundle.models_dir}/{model_filename} \\")
+    typer.echo(f"    --host 0.0.0.0 --port 8080 --ctx-size {actual_context} \\")
+    typer.echo(f"    --chat-format {chat_template}")
+
+    typer.echo("\n📁 Bundle contents:")
+    for file_path in sorted(bundle.bundle_dir.rglob("*")):
+        if file_path.is_file():
+            relative_path = file_path.relative_to(bundle.bundle_dir)
+            typer.echo(f"  {relative_path}")
+
+    raise typer.Exit(0)
