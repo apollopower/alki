@@ -282,11 +282,7 @@ EXPOSE 8080
         elif target == "k3s":
             # Generate complete Kubernetes manifests for deployment
             ctx_env = str(context_size) if context_size else "4096"
-            chat_env = (
-                f"LLAMA_ARG_CHAT_FORMAT={chat_template}"
-                if chat_template
-                else "LLAMA_ARG_CHAT_FORMAT=chatml"
-            )
+            chat_format_value = chat_template or "chatml"
 
             return f"""# Kubernetes manifests for {bundle_name}
 ---
@@ -300,7 +296,7 @@ metadata:
 data:
   model-filename: "{model_filename}"
   context-size: "{ctx_env}"
-  chat-format: "{chat_template or 'chatml'}"
+  chat-format: "{chat_format_value}"
   
 ---
 apiVersion: apps/v1
@@ -339,7 +335,7 @@ spec:
             configMapKeyRef:
               name: {bundle_name}-config
               key: context-size
-        - name: {chat_env.split('=')[0] if chat_template else 'LLAMA_ARG_CHAT_FORMAT'}
+        - name: LLAMA_ARG_CHAT_FORMAT
           valueFrom:
             configMapKeyRef:
               name: {bundle_name}-config

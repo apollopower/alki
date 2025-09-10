@@ -5,7 +5,7 @@ This converter handles conversion from HuggingFace models to GGUF format
 using llama.cpp conversion and quantization tools.
 
 NOTE: This is a placeholder implementation for the pluggable architecture.
-The actual HF → GGUF conversion will be implemented as the final Phase 1 milestone.
+The actual HF to GGUF conversion will be implemented as the final Phase 1 milestone.
 """
 
 import logging
@@ -50,7 +50,7 @@ class GGUFConverter(BaseConverter):
         Currently returns False as actual conversion is not yet implemented.
         This will be updated when the conversion is implemented.
         """
-        # TODO: Implement when HF → GGUF conversion is added
+        # TODO: Implement when HF to GGUF conversion is added
         logger.debug(
             f"GGUF converter check for {source} (architecture: {architecture})"
         )
@@ -69,7 +69,7 @@ class GGUFConverter(BaseConverter):
         This is a placeholder implementation. The actual conversion will be
         implemented as the final Phase 1 milestone.
         """
-        # TODO: Implement actual HF → GGUF conversion
+        # TODO: Implement actual HF to GGUF conversion
         # This would involve:
         # 1. Download HuggingFace model
         # 2. Convert to GGUF using llama.cpp tools
@@ -77,7 +77,7 @@ class GGUFConverter(BaseConverter):
         # 4. Validate output files
 
         logger.error(
-            "HF → GGUF conversion not yet implemented (Phase 1 final milestone)"
+            "HF to GGUF conversion not yet implemented (Phase 1 final milestone)"
         )
 
         return ConversionResult(
@@ -86,7 +86,7 @@ class GGUFConverter(BaseConverter):
             source_model=source,
             target_format=self.target_format,
             quantization_profiles=quantizations or [],
-            error="HF → GGUF conversion not yet implemented. This is the final Phase 1 milestone.",
+            error="HF to GGUF conversion not yet implemented. This is the final Phase 1 milestone.",
         )
 
     def validate_output(self, output_file: Path) -> bool:
