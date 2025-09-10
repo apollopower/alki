@@ -253,6 +253,40 @@ class TestManifestGenerator:
         assert "LLAMA_ARG_CTX_SIZE=2048" in content
         assert "test.gguf" in content
 
+    def test_deployment_placeholder_k8s(self):
+        """Test Kubernetes deployment placeholder generation"""
+        generator = ManifestGenerator()
+
+        content = generator.create_deployment_placeholder(
+            target="k3s",
+            bundle_name="test-model",
+            model_filename="test.gguf",
+            context_size=2048,
+            chat_template="llama3",
+        )
+
+        # Check for all K8s resources
+        assert "kind: ConfigMap" in content
+        assert "kind: PersistentVolumeClaim" in content
+        assert "kind: Deployment" in content
+        assert "kind: Service" in content
+
+        # Check configuration values
+        assert "test.gguf" in content
+        assert "2048" in content
+        assert "llama3" in content
+
+        # Check proper K8s structure
+        assert "apiVersion: v1" in content
+        assert "apiVersion: apps/v1" in content
+        assert "name: test-model" in content
+        assert "ghcr.io/ggerganov/llama.cpp:server" in content
+
+        # Check resource limits and health checks
+        assert "resources:" in content
+        assert "livenessProbe:" in content
+        assert "readinessProbe:" in content
+
     def test_generate_sbom(self):
         """Test SBOM generation"""
         generator = ManifestGenerator()
