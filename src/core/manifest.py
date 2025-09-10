@@ -280,8 +280,117 @@ EXPOSE 8080
 """
 
         elif target == "k3s":
-            # Skip k3s for v1 - can be added later
-            return "# Kubernetes deployment - TODO in future release\n"
+            # Generate complete Kubernetes manifests for deployment
+            ctx_env = str(context_size) if context_size else "4096"
+            chat_env = (
+                f"LLAMA_ARG_CHAT_FORMAT={chat_template}"
+                if chat_template
+                else "LLAMA_ARG_CHAT_FORMAT=chatml"
+            )
+
+            return f"""# Kubernetes manifests for {bundle_name}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {bundle_name}-config
+  labels:
+    app: {bundle_name}
+    component: llm-server
+data:
+  model-filename: "{model_filename}"
+  context-size: "{ctx_env}"
+  chat-format: "{chat_template or 'chatml'}"
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {bundle_name}
+  labels:
+    app: {bundle_name}
+    component: llm-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {bundle_name}
+  template:
+    metadata:
+      labels:
+        app: {bundle_name}
+        component: llm-server
+    spec:
+      containers:
+      - name: llama-server
+        image: ghcr.io/ggerganov/llama.cpp:server
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: LLAMA_ARG_MODEL
+          value: "/models/{model_filename}"
+        - name: LLAMA_ARG_HOST
+          value: "0.0.0.0"
+        - name: LLAMA_ARG_PORT
+          value: "8080"
+        - name: LLAMA_ARG_CTX_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: {bundle_name}-config
+              key: context-size
+        - name: {chat_env.split('=')[0] if chat_template else 'LLAMA_ARG_CHAT_FORMAT'}
+          valueFrom:
+            configMapKeyRef:
+              name: {bundle_name}-config
+              key: chat-format
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/models
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        volumeMounts:
+        - name: model-storage
+          mountPath: /models
+          readOnly: true
+      volumes:
+      - name: model-storage
+        configMap:
+          name: {bundle_name}-model
+          # Note: In production, use PersistentVolume for large models
+          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {bundle_name}
+  labels:
+    app: {bundle_name}
+    component: llm-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: {bundle_name}
+"""
 
         else:
             return f"# {target} deployment - TODO in future release\n"

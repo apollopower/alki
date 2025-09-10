@@ -33,15 +33,60 @@ alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
 alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --context-size 2048
 ```
 
+## 📝 Current Limitations
+
+Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Qwen3-0.6B-GGUF`). 
+Direct conversion from standard HuggingFace models is the final Phase 1 milestone.
+
+**✅ What works today:**
+- Packaging pre-converted GGUF models from HuggingFace
+- Validating and testing GGUF models
+- Generating deployment configs (Docker, K8s, systemd)  
+- Creating production-ready bundles with manifests and SBOMs
+- Bundle verification and integrity checks
+
+**🔜 Coming in Phase 1 completion:**
+- Direct HF model → GGUF conversion with pluggable architecture
+- Multiple quantization profiles in one command (Q4_K_M,Q5_K_M,Q8_0)
+- Automatic architecture detection and optimization
+- Container image building (`alki image build`)
+- Deployment recipe generation (`alki recipe emit`)
+
 ## 🗺️ Roadmap (Phase 1)
 
-* [x] Model ingestion (HF → GGUF conversion)
-* [x] Bundle format (manifests + GGUF models + deployment configs)
-* [🔶] CLI (`alki pack`, `alki validate`, `alki image`, `alki publish`, `alki recipe`) - *validate and pack commands implemented*
-* [🔶] llama.cpp runtime integration - *GGUF model loading implemented*
-* [ ] Container image generation with llama-server
-* [ ] Deployment recipes (systemd, k3s, Nomad)
-* [🔶] Basic validation harness (smoke tests, benchmarking) - *GGUF validation implemented*
+**Model Ingestion:**
+- [x] Pre-converted GGUF model support
+- [ ] Direct HF → GGUF conversion
+- [ ] Pluggable converter architecture
+
+**Bundle Management:**
+- [x] Bundle format (manifests + GGUF models + deployment configs)
+- [x] Bundle verification and integrity checks
+- [x] SBOM generation
+
+**CLI Commands:**
+- [x] `alki validate` - GGUF model validation
+- [x] `alki pack` - Bundle creation from GGUF models
+- [ ] `alki image` - Container image generation
+- [ ] `alki publish` - Bundle registry publishing  
+- [ ] `alki recipe` - Deployment recipe generation
+
+**Runtime Integration:**
+- [x] GGUF model loading with llama-cpp-python
+- [x] Model capability extraction
+- [ ] llama-server integration and wrapping
+
+**Deployment Support:**
+- [x] Systemd service configs
+- [x] Docker container configs
+- [x] Kubernetes manifests
+- [ ] Nomad job specs
+
+**Validation & Testing:**
+- [x] GGUF model validation
+- [x] Bundle integrity verification
+- [ ] Performance benchmarking
+- [ ] End-to-end smoke tests
 
 ## 🗺️ Roadmap (Phase 2)
 
@@ -60,11 +105,10 @@ python -m venv .venv
 source .venv/bin/activate
 make install
 
-# Pack a model: HF → GGUF + quantize to multiple profiles
-alki pack \
-  --hf "Qwen/Qwen3-0.6B-Instruct" \
-  --quant "Q4_K_M,Q5_K_M,Q8_0" \
-  --ctx 4096 \
+# Pack a pre-converted GGUF model for deployment
+alki pack "Qwen/Qwen3-0.6B-GGUF" \
+  --filename "*Q8_0.gguf" \
+  --context-size 4096 \
   --out ./dist/qwen3-0.6b
 
 # Validate a GGUF model from HuggingFace with custom context size
@@ -306,8 +350,8 @@ python scripts/test_llama.py "Qwen/Qwen3-0.6B-GGUF" "*Q8_0.gguf" --no-cleanup
 # Test end-to-end packing pipeline with real models (future)
 python scripts/test_pack_e2e.py
 
-# Test with different models and quantization profiles (future)
-python scripts/test_pack_e2e.py --model Qwen/Qwen3-0.6B-Instruct --quant Q4_K_M,Q5_K_M
+# Test with different models and quantization profiles (Phase 1 completion - HF conversion)
+python scripts/test_pack_e2e.py --hf Qwen/Qwen3-0.6B-Instruct --quant Q4_K_M,Q5_K_M
 
 # Test container image generation (future)
 python scripts/test_image_build.py

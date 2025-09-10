@@ -382,6 +382,12 @@ def pack(
     )
     (bundle.deploy_dir / "docker" / "Dockerfile").write_text(docker_config)
 
+    # Kubernetes
+    k8s_config = generator.create_deployment_placeholder(
+        "k3s", name, model_filename, actual_context, chat_template
+    )
+    (bundle.deploy_dir / "k3s" / "deployment.yaml").write_text(k8s_config)
+
     # Step 9: Verify bundle
     typer.echo("🔍 Verifying bundle integrity...")
     if bundle.verify_bundle():
