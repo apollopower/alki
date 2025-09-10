@@ -265,8 +265,9 @@ class TestManifestGenerator:
             chat_template="llama3",
         )
 
-        # Check for all three K8s resources
+        # Check for all K8s resources
         assert "kind: ConfigMap" in content
+        assert "kind: PersistentVolumeClaim" in content
         assert "kind: Deployment" in content
         assert "kind: Service" in content
 

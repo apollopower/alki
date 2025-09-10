@@ -299,6 +299,25 @@ data:
   chat-format: "{chat_format_value}"
   
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {bundle_name}-model-pvc
+  labels:
+    app: {bundle_name}
+    component: llm-server
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 2Gi  # Adjust based on model size
+  # Note: Model must be loaded into PV separately via:
+  # 1. initContainer with model download
+  # 2. Manual kubectl cp
+  # 3. CI/CD pipeline model loading
+  
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -365,9 +384,12 @@ spec:
           readOnly: true
       volumes:
       - name: model-storage
-        configMap:
-          name: {bundle_name}-model
-          # Note: In production, use PersistentVolume for large models
+        persistentVolumeClaim:
+          claimName: {bundle_name}-model-pvc
+        # Alternative approaches:
+        # 1. Use initContainer to download model from bundle registry
+        # 2. Bake model into container image (increases image size)
+        # 3. Use hostPath for single-node deployments
           
 ---
 apiVersion: v1
