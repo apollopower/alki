@@ -322,6 +322,49 @@ CMD ["-m", "/app/models/{model_filename}", "--host", "{host}", "--port", "{port}
             logger.error(f"Error listing images: {e}")
             return []
 
+    def _wait_for_container_healthy(
+        self, container_name: str, timeout: int = 60
+    ) -> bool:
+        """
+        Wait for container to be healthy according to its health check.
+
+        Args:
+            container_name: Name of the container to check
+            timeout: Timeout in seconds
+
+        Returns:
+            True if container becomes healthy, False if timeout
+        """
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            status_cmd = [
+                self.docker_client,
+                "inspect",
+                "--format",
+                "{{.State.Health.Status}}",
+                container_name,
+            ]
+            result = subprocess.run(status_cmd, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                health_status = result.stdout.strip()
+                logger.debug(
+                    f"Container {container_name} health status: {health_status}"
+                )
+
+                if health_status == "healthy":
+                    return True
+                elif health_status == "unhealthy":
+                    logger.warning(f"Container {container_name} became unhealthy")
+                    return False
+
+            time.sleep(1)  # Poll every second
+
+        logger.warning(
+            f"Timeout waiting for container {container_name} to become healthy"
+        )
+        return False
+
     def test_image(self, tag: str, timeout: int = 60) -> Dict[str, Any]:
         """
         Test image by running it and checking health.
@@ -358,10 +401,12 @@ CMD ["-m", "/app/models/{model_filename}", "--host", "{host}", "--port", "{port}
 
             container_id = result.stdout.strip()
 
-            # Wait for container to be ready
-            import time
-
-            time.sleep(5)
+            # Wait for container to be healthy
+            if not self._wait_for_container_healthy(container_name, timeout=30):
+                return {
+                    "success": False,
+                    "error": "Container failed to become healthy within timeout",
+                }
 
             # Get container port
             port_cmd = [self.docker_client, "port", container_name, "8080"]

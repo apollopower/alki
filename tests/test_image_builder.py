@@ -163,3 +163,51 @@ class TestImageBuilder:
                 assert result.image_tag == "test:latest"
                 assert result.size_mb == 500.0
                 assert result.build_time_seconds is not None
+
+    def test_wait_for_container_healthy(self):
+        """Test container health check polling"""
+        builder = ImageBuilder()
+
+        # Test successful health check
+        with patch("src.core.image_builder.subprocess.run") as mock_run:
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = "healthy"
+            mock_run.return_value = mock_result
+
+            result = builder._wait_for_container_healthy("test-container", timeout=5)
+            assert result is True
+            mock_run.assert_called_with(
+                [
+                    "docker",
+                    "inspect",
+                    "--format",
+                    "{{.State.Health.Status}}",
+                    "test-container",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+        # Test unhealthy container
+        with patch("src.core.image_builder.subprocess.run") as mock_run:
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = "unhealthy"
+            mock_run.return_value = mock_result
+
+            result = builder._wait_for_container_healthy("test-container", timeout=5)
+            assert result is False
+
+        # Test timeout scenario
+        with (
+            patch("src.core.image_builder.subprocess.run") as mock_run,
+            patch("src.core.image_builder.time.sleep"),
+        ):  # Speed up test
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = "starting"  # Never becomes healthy
+            mock_run.return_value = mock_result
+
+            result = builder._wait_for_container_healthy("test-container", timeout=1)
+            assert result is False

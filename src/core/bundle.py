@@ -162,7 +162,7 @@ class Bundle:
         # Note: quant field stores the CLI parameter for now, even though it's not used for conversion
         # In the future, this will reflect the actual quantization after conversion
         artifact = BundleArtifact(
-            quant=quantization or "unknown",
+            quant=quantization or "not_specified",
             uri=f"./models/{target_name}",
             sha256=sha256_hash,
             size=file_size,
