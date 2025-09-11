@@ -34,6 +34,10 @@ alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --name my-model
 alki image build ./dist/my-model --tag mymodel:latest
 alki image test mymodel:latest
 
+# Publish bundles for fleet deployment
+alki publish ./dist/my-model --local                          # Local build only
+alki publish ./dist/my-model --registry myregistry.com/ai    # Push to registry
+
 # With custom options
 alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
   --prompt "Explain machine learning" --max-tokens 50 --no-cleanup
@@ -75,7 +79,7 @@ Direct conversion from standard HuggingFace models is the final Phase 1 mileston
 - [x] `alki validate` - GGUF model validation
 - [x] `alki pack` - Bundle creation from GGUF models
 - [x] `alki image` - Container image generation (embedded model approach)
-- [ ] `alki publish` - Bundle registry publishing (for fleet deployments)
+- [x] `alki publish` - Bundle registry publishing (for fleet deployments)
 - [ ] `alki recipe` - Deployment recipe generation
 
 **Runtime Integration:**
@@ -116,7 +120,7 @@ docker run -p 8080:8080 mymodel:latest
 - **Use case**: Simple deployments, development, single-model scenarios
 - **Trade-off**: Larger images, full rebuild for model updates
 
-### Two-Stage: Bundle Registry (`alki publish`) *[Coming Soon]*
+### Two-Stage: Bundle Registry (`alki publish`)
 ```bash
 # Publish bundle to registry
 alki publish ./dist/my-model --registry myregistry.com/bundles --tag v1.0
@@ -159,6 +163,11 @@ alki image test acme/qwen3-0.6b:latest
 
 # List available images
 alki image list
+
+# Publish bundle for fleet deployment
+alki publish ./dist/qwen3-0.6b --registry myregistry.com/ai --tag v1.0.0
+# Or build locally for testing
+alki publish ./dist/qwen3-0.6b --local
 
 # Run locally with llama-server
 llama-server \

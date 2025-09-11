@@ -8,6 +8,7 @@ models into optimized deployment bundles for edge devices.
 import typer
 from typing import Optional
 import logging
+import json
 from pathlib import Path
 
 try:
@@ -16,6 +17,7 @@ try:
     from ..core.manifest import ManifestGenerator, ModelInfo
     from ..core.model_loader import LlamaCppModelLoader
     from ..core.image_builder import ImageBuilder
+    from ..core.registry_publisher import RegistryPublisher
 except ImportError:
     # Handle case when running as a script
     from core.validator import GGUFValidator
@@ -23,6 +25,7 @@ except ImportError:
     from core.manifest import ManifestGenerator, ModelInfo
     from core.model_loader import LlamaCppModelLoader
     from core.image_builder import ImageBuilder
+    from core.registry_publisher import RegistryPublisher
 
 # Configure logging
 logging.basicConfig(
@@ -419,6 +422,242 @@ def pack(
             typer.echo(f"  {relative_path}")
 
     raise typer.Exit(0)
+
+
+@app.command("publish")
+def publish(
+    bundle: str = typer.Argument(help="Path to bundle directory"),
+    registry: Optional[str] = typer.Option(
+        None, "--registry", "-r", help="Registry URL (e.g., 'myregistry.com/bundles')"
+    ),
+    tag: str = typer.Option(
+        "latest", "--tag", "-t", help="Image tag (default: latest)"
+    ),
+    name: Optional[str] = typer.Option(
+        None, "--name", "-n", help="Bundle name (derived from bundle if not provided)"
+    ),
+    local: bool = typer.Option(
+        False, "--local", "-l", help="Build locally only, don't push to registry"
+    ),
+    username: Optional[str] = typer.Option(
+        None,
+        "--username",
+        "-u",
+        help="Registry username (prefer env REGISTRY_USERNAME)",
+    ),
+    password: Optional[str] = typer.Option(
+        None,
+        "--password",
+        "-p",
+        help="Registry password (prefer env REGISTRY_PASSWORD)",
+    ),
+    no_validate: bool = typer.Option(
+        False, "--no-validate", help="Skip bundle validation before publishing"
+    ),
+    output_manifest: Optional[str] = typer.Option(
+        None,
+        "--output-manifest",
+        "-o",
+        help="Save Kubernetes deployment manifest to file",
+    ),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace for deployment manifest"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+):
+    """
+    Publish bundle to container registry for fleet deployment.
+    
+    This command creates a container image with the bundle embedded and optionally 
+    pushes it to a registry. Can be used for local-only builds or registry publishing.
+    
+    Examples:
+        # Local build only (for testing)
+        alki publish ./dist/qwen3-0.6b --local
+        
+        # Publish to registry (uses existing docker login)
+        alki publish ./dist/qwen3-0.6b --registry myregistry.com/bundles --tag v1.0.0
+        
+        # Publish with environment authentication
+        REGISTRY_USERNAME=myuser REGISTRY_PASSWORD=mypass \\
+        alki publish ./dist/qwen3-0.6b --registry harbor.company.com/ai-models
+    """
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    # Validate parameters
+    if not local and not registry:
+        typer.echo(
+            "❌ Error: Either --registry must be specified or --local flag must be used",
+            err=True,
+        )
+        typer.echo("Examples:", err=True)
+        typer.echo(
+            "  alki publish ./dist/bundle --local                    # Local build only",
+            err=True,
+        )
+        typer.echo(
+            "  alki publish ./dist/bundle --registry myregistry.com  # Push to registry",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    if username and password:
+        typer.echo(
+            "⚠️  Warning: Providing passwords via command line is insecure. "
+            "Consider using environment variables REGISTRY_USERNAME and REGISTRY_PASSWORD instead.",
+            err=True,
+        )
+
+    mode_desc = "🏠 Local build" if local else "🚀 Registry publish"
+    typer.echo(f"{mode_desc} - Processing bundle...")
+
+    bundle_path = Path(bundle)
+
+    # Validate bundle path
+    if not bundle_path.exists():
+        typer.echo(f"❌ Bundle path does not exist: {bundle_path}", err=True)
+        raise typer.Exit(1)
+
+    if not bundle_path.is_dir():
+        typer.echo(f"❌ Bundle path is not a directory: {bundle_path}", err=True)
+        raise typer.Exit(1)
+
+    # Check for required bundle structure
+    manifest_path = bundle_path / "metadata" / "manifest.json"
+    if not manifest_path.exists():
+        typer.echo(f"❌ Bundle manifest not found: {manifest_path}", err=True)
+        typer.echo("This doesn't appear to be a valid Alki bundle directory.", err=True)
+        typer.echo("Run 'alki pack' first to create a bundle.", err=True)
+        raise typer.Exit(1)
+
+    # Validate bundle if requested
+    if not no_validate:
+        typer.echo("🔍 Validating bundle structure...")
+        try:
+            bundle_name = name or bundle_path.name
+            validator = Bundle(bundle_path.parent, bundle_name)
+            validator.bundle_dir = bundle_path
+
+            if not validator.verify_bundle():
+                typer.echo("❌ Bundle validation failed!", err=True)
+                raise typer.Exit(1)
+
+            typer.echo("✅ Bundle validation passed")
+        except Exception as e:
+            typer.echo(f"❌ Bundle validation error: {e}", err=True)
+            raise typer.Exit(1)
+
+    # Prepare registry authentication
+    registry_auth = None
+    if username and password:
+        registry_host = (
+            registry.split("/")[0] if registry and "/" in registry else registry
+        )
+        registry_auth = {
+            "username": username,
+            "password": password,
+            "registry": registry_host,
+        }
+
+    try:
+        publisher = RegistryPublisher()
+
+        typer.echo(f"📦 Bundle: {bundle_path}")
+        if not local and registry:
+            typer.echo(f"🏢 Registry: {registry}")
+        typer.echo(f"🏷️  Tag: {tag}")
+
+        # Publish bundle
+        if local:
+            typer.echo("🔨 Building bundle container locally...")
+        else:
+            typer.echo("🔨 Building and pushing bundle container...")
+
+        result = publisher.publish_bundle(
+            bundle_path=bundle_path,
+            registry=registry,
+            name=name,
+            tag=tag,
+            registry_auth=registry_auth,
+            local_only=local,
+        )
+
+        if result.success:
+            if local:
+                typer.echo("✅ Bundle built locally!")
+                typer.echo(f"  📍 Local image: {result.bundle_uri}")
+                typer.echo("\n🚀 To push to registry later:")
+                if registry:
+                    new_tag = f"{registry.rstrip('/')}/{name or bundle_path.name}:{tag}"
+                    typer.echo(f"  docker tag {result.bundle_uri} {new_tag}")
+                    typer.echo(f"  docker push {new_tag}")
+                else:
+                    typer.echo(
+                        f"  docker tag {result.bundle_uri} <registry>/<name>:{tag}"
+                    )
+                    typer.echo(f"  docker push <registry>/<name>:{tag}")
+            else:
+                typer.echo("✅ Bundle published successfully!")
+                typer.echo(f"  📍 Bundle URI: {result.bundle_uri}")
+                if result.registry_digest:
+                    typer.echo(f"  🔒 Registry digest: {result.registry_digest}")
+
+            if result.size_mb:
+                typer.echo(f"  📏 Image size: {result.size_mb:.1f} MB")
+            if result.push_time_seconds:
+                typer.echo(f"  ⏱️  Time: {result.push_time_seconds:.1f}s")
+
+            # Load bundle metadata for deployment manifest
+            with open(manifest_path) as f:
+                bundle_metadata = json.load(f)
+
+            # Generate deployment manifest
+            deployment_name = name or bundle_metadata.get("name", bundle_path.name)
+            bundle_uri_for_k8s = result.bundle_uri
+
+            deployment_manifest = publisher.generate_deployment_manifest(
+                bundle_uri=bundle_uri_for_k8s,
+                bundle_name=deployment_name,
+                bundle_metadata=bundle_metadata,
+                namespace=namespace,
+            )
+
+            # Save manifest if requested
+            if output_manifest:
+                manifest_file = Path(output_manifest)
+                manifest_file.write_text(deployment_manifest)
+                typer.echo(f"📄 Deployment manifest saved: {manifest_file}")
+
+            if not local:
+                typer.echo("\n🚀 To deploy on Kubernetes:")
+                if output_manifest:
+                    typer.echo(f"  kubectl apply -f {output_manifest}")
+                else:
+                    typer.echo("  kubectl apply -f <saved-manifest>.yaml")
+
+                typer.echo("\n📋 To update existing deployment:")
+                typer.echo(
+                    f"  kubectl set image deployment/{deployment_name} bundle-loader={result.bundle_uri}"
+                )
+
+                typer.echo("\n🔍 To verify deployment:")
+                typer.echo(f"  kubectl get pods -l app={deployment_name}")
+                typer.echo(f"  kubectl logs -l app={deployment_name} -c llama-server")
+
+        else:
+            operation = "build" if local else "publish"
+            typer.echo(f"❌ Bundle {operation} failed!", err=True)
+            if result.error:
+                typer.echo(f"Error: {result.error}", err=True)
+            raise typer.Exit(1)
+
+    except Exception as e:
+        operation = "build" if local else "publish"
+        typer.echo(f"❌ {operation.title()} error: {e}", err=True)
+        raise typer.Exit(1)
 
 
 # Create image sub-app
