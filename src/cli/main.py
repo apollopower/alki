@@ -160,7 +160,7 @@ def pack(
         None,
         "--quant",
         "-q",
-        help="Quantization profile (not implemented - for future use)",
+        help="Quantization profile (stored as metadata only, conversion not yet supported)",
     ),
     context_size: int = typer.Option(
         2048,

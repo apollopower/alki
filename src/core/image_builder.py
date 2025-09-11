@@ -9,6 +9,8 @@ import json
 import logging
 import subprocess
 import tempfile
+import requests
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -165,8 +167,6 @@ CMD ["-m", "/app/models/{model_filename}", "--host", "{host}", "--port", "{port}
         Returns:
             ImageBuildResult with build status and metadata
         """
-        import time
-
         start_time = time.time()
 
         try:
@@ -379,8 +379,6 @@ CMD ["-m", "/app/models/{model_filename}", "--host", "{host}", "--port", "{port}
 
             # Test health endpoint
             try:
-                import requests
-
                 health_url = f"http://localhost:{host_port}/health"
                 response = requests.get(health_url, timeout=10)
                 health_ok = response.status_code == 200
