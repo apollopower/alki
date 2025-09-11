@@ -119,14 +119,14 @@ class Bundle:
         logger.debug(f"Created bundle directories: {list(self.bundle_dir.iterdir())}")
 
     def add_model(
-        self, model_path: Path, quantization: str = "Q4_K_M"
+        self, model_path: Path, quantization: Optional[str] = None
     ) -> BundleArtifact:
         """
         Add a GGUF model to the bundle
 
         Args:
             model_path: Path to GGUF model file
-            quantization: Quantization profile name
+            quantization: Quantization profile name (currently ignored - stored as metadata only)
 
         Returns:
             BundleArtifact with model metadata
@@ -134,9 +134,18 @@ class Bundle:
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
 
-        # Generate target filename
-        target_name = f"{self.name}-{quantization.lower()}.gguf"
+        # Use original filename with bundle name prefix to preserve actual quantization info
+        original_name = model_path.name
+        target_name = f"{self.name}-{original_name}"
         target_path = self.models_dir / target_name
+
+        # Warn only when quantization parameter is explicitly provided
+        if quantization is not None:
+            logger.warning(
+                f"Note: --quant parameter '{quantization}' is ignored. "
+                f"The model file '{original_name}' retains its original quantization. "
+                f"Quantization conversion will be available in a future release."
+            )
 
         logger.info(f"Adding model: {model_path.name} -> {target_name}")
 
@@ -150,8 +159,10 @@ class Bundle:
         file_size = target_path.stat().st_size
 
         # Create artifact record
+        # Note: quant field stores the CLI parameter for now, even though it's not used for conversion
+        # In the future, this will reflect the actual quantization after conversion
         artifact = BundleArtifact(
-            quant=quantization,
+            quant=quantization or "not_specified",
             uri=f"./models/{target_name}",
             sha256=sha256_hash,
             size=file_size,

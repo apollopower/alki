@@ -15,12 +15,14 @@ try:
     from ..core.bundle import Bundle
     from ..core.manifest import ManifestGenerator, ModelInfo
     from ..core.model_loader import LlamaCppModelLoader
+    from ..core.image_builder import ImageBuilder
 except ImportError:
     # Handle case when running as a script
     from core.validator import GGUFValidator
     from core.bundle import Bundle
     from core.manifest import ManifestGenerator, ModelInfo
     from core.model_loader import LlamaCppModelLoader
+    from core.image_builder import ImageBuilder
 
 # Configure logging
 logging.basicConfig(
@@ -154,11 +156,11 @@ def pack(
         "-n",
         help="Bundle name (derived from model if not provided)",
     ),
-    quant: str = typer.Option(
-        "Q4_K_M",
+    quant: Optional[str] = typer.Option(
+        None,
         "--quant",
         "-q",
-        help="Quantization profile (default: Q4_K_M)",
+        help="Quantization profile (stored as metadata only, conversion not yet supported)",
     ),
     context_size: int = typer.Option(
         2048,
@@ -359,7 +361,7 @@ def pack(
 
     # Step 7: Add documentation
     typer.echo("📄 Creating documentation...")
-    bundle.add_readme(name, [quant])
+    bundle.add_readme(name, [quant] if quant else [])
     bundle.add_license(
         "Please add the appropriate license for your model.\n"
         "Check the original model repository for license information."
@@ -368,7 +370,8 @@ def pack(
     # Step 8: Create deployment configs
     typer.echo("🚀 Creating deployment configurations...")
 
-    model_filename = f"{name}-{quant.lower()}.gguf"
+    # Use the actual model filename from the artifact
+    model_filename = artifact.uri.split("/")[-1]
 
     # Systemd service
     systemd_config = generator.create_deployment_placeholder(
@@ -416,3 +419,202 @@ def pack(
             typer.echo(f"  {relative_path}")
 
     raise typer.Exit(0)
+
+
+# Create image sub-app
+image_app = typer.Typer(name="image", help="Container image operations")
+app.add_typer(image_app, name="image")
+
+
+@image_app.command("build")
+def image_build(
+    bundle: str = typer.Argument(help="Path to bundle directory"),
+    tag: str = typer.Option(
+        ..., "--tag", "-t", help="Docker image tag (e.g., 'mymodel:latest')"
+    ),
+    base: str = typer.Option(
+        "debian", "--base", "-b", help="Base image type (alpine, ubuntu, debian)"
+    ),
+    push: bool = typer.Option(
+        False, "--push", help="Push image to registry after build"
+    ),
+    ctx_size: Optional[int] = typer.Option(
+        None, "--ctx-size", "-c", help="Override context size for runtime"
+    ),
+    host: str = typer.Option("0.0.0.0", "--host", help="Host to bind server to"),
+    port: int = typer.Option(8080, "--port", "-p", help="Port to bind server to"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+):
+    """
+    Build container image from bundle.
+
+    Creates an optimized container image with llama-server runtime
+    for deploying GGUF models at the edge.
+
+    Examples:
+        alki image build ./dist/qwen3-0.6b --tag mymodel:latest
+        alki image build ./bundles/llama --tag myorg/llama:v1 --base alpine --push
+        alki image build ./dist/model --tag model:dev --ctx-size 4096
+    """
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    bundle_path = Path(bundle)
+
+    # Validate bundle path
+    if not bundle_path.exists():
+        typer.echo(f"❌ Bundle path does not exist: {bundle_path}", err=True)
+        raise typer.Exit(1)
+
+    if not bundle_path.is_dir():
+        typer.echo(f"❌ Bundle path is not a directory: {bundle_path}", err=True)
+        raise typer.Exit(1)
+
+    # Check for required bundle structure
+    manifest_path = bundle_path / "metadata" / "manifest.json"
+    if not manifest_path.exists():
+        typer.echo(f"❌ Bundle manifest not found: {manifest_path}", err=True)
+        typer.echo("This doesn't appear to be a valid Alki bundle directory.")
+        raise typer.Exit(1)
+
+    typer.echo("🐳 Alki Image Build - Creating container image...")
+    typer.echo(f"Bundle: {bundle_path}")
+    typer.echo(f"Tag: {tag}")
+    typer.echo(f"Base image: {base}")
+
+    # Prepare runtime config
+    runtime_config = {"host": host, "port": port}
+    if ctx_size:
+        runtime_config["ctx"] = ctx_size
+
+    try:
+        # Initialize image builder
+        builder = ImageBuilder()
+
+        typer.echo("🔨 Building container image...")
+        result = builder.build_image(
+            bundle_path=bundle_path,
+            tag=tag,
+            base_image=base,
+            runtime_config=runtime_config,
+            push=push,
+        )
+
+        if result.success:
+            typer.echo("✅ Image built successfully!")
+            typer.echo(f"  Tag: {result.image_tag}")
+            if result.size_mb:
+                typer.echo(f"  Size: {result.size_mb:.1f} MB")
+            if result.build_time_seconds:
+                typer.echo(f"  Build time: {result.build_time_seconds:.1f}s")
+
+            if push:
+                typer.echo("📤 Image pushed to registry")
+
+            typer.echo("\n🚀 To run the image:")
+            typer.echo(f"  docker run -p {port}:{port} {tag}")
+
+            typer.echo("\n🔍 Test the API:")
+            typer.echo(f"  curl http://localhost:{port}/v1/models")
+        else:
+            typer.echo("❌ Image build failed!", err=True)
+            if result.error:
+                typer.echo(f"Error: {result.error}", err=True)
+            if result.build_log and verbose:
+                typer.echo("Build log:", err=True)
+                typer.echo(result.build_log, err=True)
+            raise typer.Exit(1)
+
+    except Exception as e:
+        typer.echo(f"❌ Image build error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@image_app.command("list")
+def image_list(
+    filter_tag: Optional[str] = typer.Option(
+        None, "--filter", "-f", help="Filter images by tag pattern"
+    ),
+):
+    """
+    List available container images.
+
+    Examples:
+        alki image list
+        alki image list --filter "mymodel*"
+    """
+    try:
+        builder = ImageBuilder()
+        images = builder.list_images(filter_tag)
+
+        if not images:
+            typer.echo("No images found.")
+            return
+
+        typer.echo("📋 Container Images:")
+        typer.echo()
+
+        for image in images:
+            repo = image.get("Repository", "")
+            tag = image.get("Tag", "")
+            image_id = image.get("ID", "")[:12]
+            created = image.get("CreatedSince", "")
+            size = image.get("Size", "")
+
+            typer.echo(f"  {repo}:{tag}")
+            typer.echo(f"    ID: {image_id}")
+            typer.echo(f"    Created: {created}")
+            typer.echo(f"    Size: {size}")
+            typer.echo()
+
+    except Exception as e:
+        typer.echo(f"❌ Error listing images: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@image_app.command("test")
+def image_test(
+    tag: str = typer.Argument(help="Docker image tag to test"),
+    timeout: int = typer.Option(60, "--timeout", "-t", help="Test timeout in seconds"),
+):
+    """
+    Test container image by running it and checking health.
+
+    Examples:
+        alki image test mymodel:latest
+        alki image test myorg/llama:v1 --timeout 120
+    """
+    typer.echo(f"🧪 Testing image: {tag}")
+
+    try:
+        builder = ImageBuilder()
+        result = builder.test_image(tag, timeout)
+
+        if result["success"]:
+            typer.echo("✅ Image test passed!")
+            typer.echo(f"  Container: {result.get('container_id', 'unknown')[:12]}")
+            typer.echo(f"  Port: {result.get('port', 'unknown')}")
+            typer.echo(
+                f"  Health check: {'✅' if result.get('health_check') else '❌'}"
+            )
+            typer.echo(
+                f"  Models endpoint: {'✅' if result.get('models_endpoint') else '❌'}"
+            )
+
+            if result.get("models_data"):
+                models = result["models_data"].get("data", [])
+                if models:
+                    typer.echo("  Available models:")
+                    for model in models:
+                        typer.echo(f"    - {model.get('id', 'unknown')}")
+        else:
+            typer.echo("❌ Image test failed!", err=True)
+            if result.get("error"):
+                typer.echo(f"Error: {result['error']}", err=True)
+            raise typer.Exit(1)
+
+    except Exception as e:
+        typer.echo(f"❌ Test error: {e}", err=True)
+        raise typer.Exit(1)

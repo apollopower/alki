@@ -16,8 +16,10 @@ Alki takes a Hugging Face model, converts it to GGUF format, applies quantizatio
 Alki currently provides:
 
 * **GGUF Model Validation** - Validate pre-converted GGUF models from HuggingFace or local files
+* **Bundle Creation** - Package GGUF models with manifests and deployment configs
+* **Container Image Generation** - Build Docker images with llama-server runtime
 * **Model Loading & Inference** - Load and test GGUF models using llama-cpp-python
-* **CLI Interface** - `alki validate` command for model validation workflows
+* **CLI Interface** - Complete toolchain with `validate`, `pack`, and `image` commands
 * **Development Tools** - Test scripts for validation and model loading
 
 ```bash
@@ -25,12 +27,16 @@ Alki currently provides:
 alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
 alki validate /path/to/local/model.gguf
 
-# With options
+# Create deployment bundles
+alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --name my-model
+
+# Build container images
+alki image build ./dist/my-model --tag mymodel:latest
+alki image test mymodel:latest
+
+# With custom options
 alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
   --prompt "Explain machine learning" --max-tokens 50 --no-cleanup
-
-# With custom context size for edge devices
-alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --context-size 2048
 ```
 
 ## 📝 Current Limitations
@@ -41,15 +47,16 @@ Direct conversion from standard HuggingFace models is the final Phase 1 mileston
 **✅ What works today:**
 - Packaging pre-converted GGUF models from HuggingFace
 - Validating and testing GGUF models
-- Generating deployment configs (Docker, K8s, systemd)  
 - Creating production-ready bundles with manifests and SBOMs
+- Generating deployment configs (Docker, K8s, systemd)
+- Building container images with llama-server runtime
 - Bundle verification and integrity checks
 
 **🔜 Coming in Phase 1 completion:**
 - Direct HF model → GGUF conversion with pluggable architecture
+- Actual quantization conversion (currently preserves original quantization)
 - Multiple quantization profiles in one command (Q4_K_M,Q5_K_M,Q8_0)
 - Automatic architecture detection and optimization
-- Container image building (`alki image build`)
 - Deployment recipe generation (`alki recipe emit`)
 
 ## 🗺️ Roadmap (Phase 1)
@@ -67,7 +74,7 @@ Direct conversion from standard HuggingFace models is the final Phase 1 mileston
 **CLI Commands:**
 - [x] `alki validate` - GGUF model validation
 - [x] `alki pack` - Bundle creation from GGUF models
-- [ ] `alki image` - Container image generation
+- [x] `alki image` - Container image generation
 - [ ] `alki publish` - Bundle registry publishing  
 - [ ] `alki recipe` - Deployment recipe generation
 
@@ -114,11 +121,14 @@ alki pack "Qwen/Qwen3-0.6B-GGUF" \
 # Validate a GGUF model from HuggingFace with custom context size
 alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --context-size 1024
 
-# Build container image
-alki image build \
-  --bundle ./dist/qwen3-0.6b \
-  --runtime llama.cpp \
-  --tag acme/qwen3-0.6b:Q4
+# Build container image from bundle
+alki image build ./dist/qwen3-0.6b --tag acme/qwen3-0.6b:latest
+
+# Test the container image
+alki image test acme/qwen3-0.6b:latest
+
+# List available images
+alki image list
 
 # Run locally with llama-server
 llama-server \

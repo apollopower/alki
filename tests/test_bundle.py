@@ -71,7 +71,8 @@ class TestBundle:
             assert artifact.quant == "Q4_K_M"
             assert artifact.size == 18
             assert artifact.sha256 is not None
-            assert (bundle.models_dir / "test-model-q4_k_m.gguf").exists()
+            # New behavior: filename preserves original name
+            assert (bundle.models_dir / "test-model-test.gguf").exists()
 
     def test_create_manifest(self):
         """Test manifest creation"""
@@ -381,3 +382,36 @@ class TestEndToEnd:
             assert info["name"] == "test-model"
             assert info["version"] == "1.0.0"
             assert info["artifacts"] == 1
+
+    def test_filename_preservation_prevents_misleading_names(self):
+        """Test that filenames preserve actual quantization info"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bundle = Bundle(Path(tmpdir), "mymodel")
+            bundle.create_structure()
+
+            # Test different scenarios
+            test_cases = [
+                ("model-q8_0.gguf", "Q4_K_M"),  # Q8_0 model, requesting Q4_K_M
+                ("model-q5_k_m.gguf", "Q8_0"),  # Q5_K_M model, requesting Q8_0
+                ("model-f16.gguf", "Q4_0"),  # F16 model, requesting Q4_0
+            ]
+
+            for original_filename, requested_quant in test_cases:
+                model_file = Path(tmpdir) / original_filename
+                model_file.write_bytes(b"GGUF fake model data")
+
+                artifact = bundle.add_model(model_file, quantization=requested_quant)
+
+                # Original filename should be preserved in artifact.filename
+                assert artifact.filename == original_filename
+
+                # Bundle filename should include original name
+                expected_bundle_name = f"mymodel-{original_filename}"
+                assert expected_bundle_name in artifact.uri
+
+                # Quantization mismatch should be clear in metadata
+                assert artifact.quant == requested_quant
+
+                # Actual file should exist with preserved name
+                bundle_file_path = bundle.models_dir / expected_bundle_name
+                assert bundle_file_path.exists()
