@@ -9,7 +9,7 @@ Alki takes a Hugging Face model, converts it to GGUF format, applies quantizatio
 * **Simple**: One command from HuggingFace to optimized GGUF bundle.
 * **Portable**: CPU/GPU support via llama.cpp runtime with broad hardware compatibility.
 * **Production-ready**: Containers, systemd units, and deployment manifests included.
-* **A/B safe**: Versioned bundles with manifests for reliable fleet deployments.
+* **A/B safe**: Versioned bundles with registry publishing for reliable fleet deployments and gradual rollouts.
 
 ## ✅ Current Capabilities
 
@@ -74,8 +74,8 @@ Direct conversion from standard HuggingFace models is the final Phase 1 mileston
 **CLI Commands:**
 - [x] `alki validate` - GGUF model validation
 - [x] `alki pack` - Bundle creation from GGUF models
-- [x] `alki image` - Container image generation
-- [ ] `alki publish` - Bundle registry publishing  
+- [x] `alki image` - Container image generation (embedded model approach)
+- [ ] `alki publish` - Bundle registry publishing (for fleet deployments)
 - [ ] `alki recipe` - Deployment recipe generation
 
 **Runtime Integration:**
@@ -103,6 +103,36 @@ Direct conversion from standard HuggingFace models is the final Phase 1 mileston
   * [ ] ONNX Runtime option (backward compatibility)
   * [ ] Manual quantization methods (Q4_K_M, Q5_K_M, Q8_0)
 * [ ] Fleet management and A/B deployment tools
+
+## 🏗️ Deployment Architecture
+
+Alki supports two deployment approaches for different use cases:
+
+### Single-Stage: Embedded Models (`alki image`)
+```bash
+alki image build ./dist/my-model --tag mymodel:latest
+docker run -p 8080:8080 mymodel:latest
+```
+- **Use case**: Simple deployments, development, single-model scenarios
+- **Trade-off**: Larger images, full rebuild for model updates
+
+### Two-Stage: Bundle Registry (`alki publish`) *[Coming Soon]*
+```bash
+# Publish bundle to registry
+alki publish ./dist/my-model --registry myregistry.com/bundles --tag v1.0
+
+# Deploy runtime container that pulls bundle
+docker run -p 8080:8080 \
+  -e ALKI_BUNDLE_URI=myregistry.com/bundles/my-model:v1.0 \
+  myregistry.com/alki-runtime:latest
+```
+- **Use case**: Production fleets, A/B testing, frequent model updates
+- **Benefits**: Efficient updates, version management, gradual rollouts
+
+### Bundle Registry vs Container Registry
+- **Container Registry**: Stores complete container images with models baked in
+- **Bundle Registry**: Stores only model bundles; runtime containers pull them at startup
+- **Result**: Faster updates, better bandwidth utilization, easier A/B deployment
 
 ## 🚀 Quickstart
 
