@@ -368,12 +368,17 @@ class TestCLIPublish:
         result = runner.invoke(app, ["publish", "--help"])
 
         assert result.exit_code == 0
+        
+        # Strip ANSI escape codes for consistent testing across environments
+        import re
+        clean_output = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+        
         assert (
-            "Publish bundle to container registry for fleet deployment" in result.stdout
+            "Publish bundle to container registry for fleet deployment" in clean_output
         )
-        assert "--registry" in result.stdout
-        assert "--local" in result.stdout
-        assert "--username" in result.stdout
-        assert "--output-manifest" in result.stdout
-        assert "Examples:" in result.stdout
-        assert "alki publish" in result.stdout
+        assert "--registry" in clean_output
+        assert "--local" in clean_output
+        assert "--username" in clean_output
+        assert "--output-manifest" in clean_output
+        assert "Examples:" in clean_output
+        assert "alki publish" in clean_output
