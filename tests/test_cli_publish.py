@@ -368,11 +368,12 @@ class TestCLIPublish:
         result = runner.invoke(app, ["publish", "--help"])
 
         assert result.exit_code == 0
-        
+
         # Strip ANSI escape codes for consistent testing across environments
         import re
-        clean_output = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
-        
+
+        clean_output = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
+
         assert (
             "Publish bundle to container registry for fleet deployment" in clean_output
         )
