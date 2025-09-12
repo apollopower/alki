@@ -194,7 +194,7 @@ curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "qwen3-0.6b-instruct",
-    "messages": [{"role": "user", "content": "Hello, how are you?"}],
+    "messages": [{"role": "user", "content": "Tell me about Alki beach in Seattle, WA?"}],
     "max_tokens": 100,
     "temperature": 0.8
   }'

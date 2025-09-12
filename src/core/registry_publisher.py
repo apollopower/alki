@@ -151,9 +151,13 @@ COPY . /bundle/
 RUN find /bundle -type f -exec chmod 644 {{}} + && \\
     find /bundle -type d -exec chmod 755 {{}} +
 
-# Provide extraction helper script
+# Provide extraction helper script with path validation
 RUN echo '#!/bin/sh' > /extract-bundle.sh && \\
-    echo 'tar -czf - -C /bundle . > /tmp/bundle.tar.gz && mv /tmp/bundle.tar.gz $1' >> /extract-bundle.sh && \\
+    echo 'if [ -z "$1" ]; then echo "Usage: /extract-bundle.sh <output-file>"; exit 1; fi' >> /extract-bundle.sh && \\
+    echo 'OUTPUT=$(basename "$1")' >> /extract-bundle.sh && \\
+    echo 'if [ "$OUTPUT" != "$1" ]; then echo "Error: Only filenames allowed, no paths"; exit 1; fi' >> /extract-bundle.sh && \\
+    echo 'tar -czf - -C /bundle . > "/tmp/$OUTPUT" && mv "/tmp/$OUTPUT" "/tmp/$OUTPUT.bundle"' >> /extract-bundle.sh && \\
+    echo 'echo "Bundle extracted to: /tmp/$OUTPUT.bundle"' >> /extract-bundle.sh && \\
     chmod +x /extract-bundle.sh
 
 # Default command shows bundle info
@@ -477,6 +481,10 @@ CMD ["sh", "-c", "echo 'Alki Bundle:' && ls -la /bundle/ && echo '' && cat /bund
         """
         start_time = time.time()
 
+        # Initialize variables for error handling
+        bundle_uri = "unknown"
+        full_tag = "unknown"
+
         try:
             # Validate bundle
             if not bundle_path.exists() or not bundle_path.is_dir():
@@ -566,8 +574,8 @@ CMD ["sh", "-c", "echo 'Alki Bundle:' && ls -la /bundle/ && echo '' && cat /bund
             total_time = time.time() - start_time
             return PublishResult(
                 success=False,
-                bundle_uri=bundle_uri if "bundle_uri" in locals() else "unknown",
-                image_tag=full_tag if "full_tag" in locals() else "unknown",
+                bundle_uri=bundle_uri,
+                image_tag=full_tag,
                 push_time_seconds=total_time,
                 error=str(e),
             )
@@ -598,7 +606,7 @@ CMD ["sh", "-c", "echo 'Alki Bundle:' && ls -la /bundle/ && echo '' && cat /bund
 
         # Get primary artifact info
         artifacts = bundle_metadata.get("artifacts", [])
-        model_filename = "model.gguf"  # IMPORTANT: gguf is assumed right now since it's the only supported format
+        model_filename = self._get_default_model_filename(artifacts)
         if artifacts:
             # Use the URI from the first artifact, extract filename
             model_uri = artifacts[0].get("uri", "")
@@ -767,3 +775,25 @@ spec:
 """
 
         return manifest
+
+    def _get_default_model_filename(self, artifacts: list) -> str:
+        """
+        Get default model filename based on supported formats.
+
+        Args:
+            artifacts: List of bundle artifacts (unused currently, reserved for future format detection)
+
+        Returns:
+            Default model filename with appropriate extension
+
+        Note:
+            Currently only GGUF format is supported. This method provides
+            a centralized place to extend format support in the future.
+            The artifacts parameter is reserved for future use when format
+            detection from artifact metadata is implemented.
+        """
+        # TODO: Expand to detect and support multiple formats (ONNX, TensorRT)
+        # when converter support is added in future phases
+        # TODO: Use artifacts parameter to detect format from metadata
+        _ = artifacts  # Acknowledge unused parameter for future format detection
+        return "model.gguf"
