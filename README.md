@@ -43,70 +43,59 @@ alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
   --prompt "Explain machine learning" --max-tokens 50 --no-cleanup
 ```
 
-## 📝 Current Limitations
+## 📍 Current Development Status
 
-Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Qwen3-0.6B-GGUF`). 
-Direct conversion from standard HuggingFace models is the final Phase 1 milestone.
+Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Qwen3-0.6B-GGUF`). We're actively developing direct HuggingFace model conversion to unlock the full vision.
 
-**✅ What works today:**
-- Packaging pre-converted GGUF models from HuggingFace
-- Validating and testing GGUF models
-- Creating production-ready bundles with manifests and SBOMs
-- Generating deployment configs (Docker, K8s, systemd)
-- Building container images with llama-server runtime
-- Bundle verification and integrity checks
+**✅ Available now:**
+- **GGUF Model Validation** - Comprehensive testing with inference validation
+- **Production Bundles** - Complete deployment packages with manifests and SBOMs
+- **Multi-Platform Deployment** - Docker, Kubernetes, and systemd configurations
+- **Container Images** - Optimized images with llama-server runtime
+- **Registry Publishing** - Fleet deployment with version management
+- **CLI Interface** - `validate`, `pack`, `image`, and `publish` commands
 
-**🔜 Coming in Phase 1 completion:**
-- Direct HF model → GGUF conversion with pluggable architecture
-- Actual quantization conversion (currently preserves original quantization)
-- Multiple quantization profiles in one command (Q4_K_M,Q5_K_M,Q8_0)
-- Automatic architecture detection and optimization
-- Deployment recipe generation (`alki recipe emit`)
+**🚧 Coming in Phase 1:**
+- **Direct HF → GGUF Conversion** - Convert any HuggingFace model seamlessly
+- **Advanced Quantization** - Multiple profiles (Q4_K_M, Q5_K_M, Q8_0) in one command
+- **Recipe Generation** - `alki recipe` for deployment automation
+- **Performance Benchmarking** - Edge-optimized evaluation framework
+- **Enhanced Architecture Support** - Automatic detection and optimization
 
-## 🗺️ Roadmap (Phase 1)
+## 🎯 Development Roadmap
 
-**Model Ingestion:**
+**See [ROADMAP.md](ROADMAP.md) for complete development plan and contribution opportunities.**
+
+### Phase 1: Core Functionality ⚡ *In Development*
+
+**Model Conversion & Optimization**
 - [x] Pre-converted GGUF model support
-- [ ] Direct HF → GGUF conversion
-- [ ] Pluggable converter architecture
+- [ ] **Direct HF → GGUF conversion** *Priority*
+- [ ] **Pluggable converter architecture** 
+- [ ] **Multi-quantization workflows**
+- [ ] **Architecture detection & optimization**
 
-**Bundle Management:**
-- [x] Bundle format (manifests + GGUF models + deployment configs)
-- [x] Bundle verification and integrity checks
-- [x] SBOM generation
+**Production Deployment**
+- [x] Bundle format with manifests and deployment configs
+- [x] Container image generation and registry publishing
+- [x] Multi-platform support (Docker, K8s, systemd)
+- [ ] **Recipe generation** (`alki recipe`)
+- [ ] **Performance benchmarking framework**
+- [ ] **End-to-end validation pipeline**
 
-**CLI Commands:**
-- [x] `alki validate` - GGUF model validation
-- [x] `alki pack` - Bundle creation from GGUF models
-- [x] `alki image` - Container image generation (embedded model approach)
-- [x] `alki publish` - Bundle registry publishing (for fleet deployments)
-- [ ] `alki recipe` - Deployment recipe generation
+### Phase 2: Advanced Capabilities 🚀 *Planned*
 
-**Runtime Integration:**
-- [x] GGUF model loading with llama-cpp-python
-- [x] Model capability extraction
-- [ ] llama-server integration and wrapping
+**Ecosystem Integration**
+- [ ] Multi-runtime backends (Ollama, MLC-LLM, ONNX Runtime, TensorRT-LLM)
+- [ ] Hardware-specific optimization (Jetson, Apple Silicon, x86)
+- [ ] Cloud provider integrations
 
-**Deployment Support:**
-- [x] Systemd service configs
-- [x] Docker container configs
-- [x] Kubernetes manifests
-- [ ] Nomad job specs
+**Enterprise Features**
+- [ ] Fleet management and A/B deployment orchestration
+- [ ] Advanced monitoring and analytics
+- [ ] Security and compliance enhancements
 
-**Validation & Testing:**
-- [x] GGUF model validation
-- [x] Bundle integrity verification
-- [ ] Performance benchmarking
-- [ ] End-to-end smoke tests
-
-## 🗺️ Roadmap (Phase 2)
-
-* [ ] Additional runtime backends as plugins
-  * [ ] Ollama integration (auto-generate Modelfile)
-  * [ ] MLC-LLM support (TVM packages)
-  * [ ] ONNX Runtime option (backward compatibility)
-  * [ ] Manual quantization methods (Q4_K_M, Q5_K_M, Q8_0)
-* [ ] Fleet management and A/B deployment tools
+**See [ROADMAP.md](ROADMAP.md) for complete roadmap and Phase 3 ecosystem plans.**
 
 ## 🏗️ Deployment Architecture
 
@@ -431,10 +420,19 @@ Free to use, modify, and contribute.
 
 ## 🤝 Contributing
 
-Alki is just getting started. Contributions are welcome, especially around:
+Alki is actively developed and contributions are very welcome! We especially need help with:
 
+**Phase 1 Priorities** ⚡
+* **HF → GGUF Conversion** - Help implement the core conversion pipeline
+* **Performance Benchmarking** - Build edge-specific evaluation frameworks  
+* **Recipe Generation** - Complete deployment automation features
+* **Model Testing** - Validate with different GGUF architectures
+* **Documentation** - Improve guides and examples
+
+**Future Contributions**
 * Additional runtime backends (Ollama, MLC-LLM, TensorRT-LLM)
-* Deployment targets (Jetson, Apple MLX, Android QNN, WebAssembly)
-* Fleet management and A/B deployment tools
-* Benchmarking and validation frameworks
-* Security and compliance features
+* Hardware platform support (Jetson, Apple MLX, WebAssembly)
+* Fleet management and deployment orchestration
+* Security and compliance enhancements
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
