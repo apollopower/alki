@@ -18,6 +18,9 @@ try:
     from ..core.model_loader import LlamaCppModelLoader
     from ..core.image_builder import ImageBuilder
     from ..core.registry_publisher import RegistryPublisher
+    from ..core.model_detector import ModelDetector, ModelType
+    from ..core.tool_manager import DependencyError, ConversionError
+    from ..converters import get_converter
 except ImportError:
     # Handle case when running as a script
     from core.validator import GGUFValidator
@@ -26,6 +29,9 @@ except ImportError:
     from core.model_loader import LlamaCppModelLoader
     from core.image_builder import ImageBuilder
     from core.registry_publisher import RegistryPublisher
+    from core.model_detector import ModelDetector, ModelType
+    from core.tool_manager import DependencyError, ConversionError
+    from converters import get_converter
 
 # Configure logging
 logging.basicConfig(
@@ -159,11 +165,11 @@ def pack(
         "-n",
         help="Bundle name (derived from model if not provided)",
     ),
-    quant: Optional[str] = typer.Option(
-        None,
-        "--quant",
+    quantize: list[str] = typer.Option(
+        ["Q4_K_M"],
+        "--quantize",
         "-q",
-        help="Quantization profile (stored as metadata only, conversion not yet supported)",
+        help="Quantization profiles for HuggingFace model conversion (e.g., Q4_K_M,Q5_K_M)",
     ),
     context_size: int = typer.Option(
         2048,
@@ -186,16 +192,23 @@ def pack(
     ),
 ):
     """
-    Create a deployment bundle from a GGUF model.
+    Create a deployment bundle from a model (GGUF or HuggingFace).
 
+    Automatically detects model type and converts HuggingFace PyTorch models to GGUF if needed.
     This command validates the model (unless skipped), extracts its capabilities,
     and creates a complete deployment bundle with manifests, deployment configs,
     and documentation.
 
     Examples:
+        # Local GGUF file
         alki pack /path/to/model.gguf --out ./bundles
+
+        # HuggingFace GGUF repository
         alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --name qwen3-0.6b
-        alki pack "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" --quant Q5_K_M
+
+        # NEW: HuggingFace PyTorch model (auto-converts to GGUF)
+        alki pack "meta-llama/Llama-3.2-1B" --quantize Q4_K_M,Q5_K_M
+        alki pack "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -216,73 +229,167 @@ def pack(
     typer.echo(f"Bundle name: {name}")
     typer.echo(f"Output directory: {output_dir}")
 
-    # Step 1: Validate model and get capabilities using our existing validator
+    # Step 1: Detect model type and source
+    detector = ModelDetector()
+    model_type = detector.detect_model_type(model, filename)
+
+    typer.echo(f"🔍 Detected model type: {model_type.value}")
+
+    # Step 2: Handle model based on type
     validator = GGUFValidator()
     validation_result = None
+    final_model_path = None
 
-    if not no_validate:
-        typer.echo("🔍 Validating model and extracting capabilities...")
+    if model_type == ModelType.LOCAL_GGUF:
+        # Handle local GGUF files (existing logic)
+        final_model_path = model_path
 
-        try:
-            # Use our existing validation infrastructure
-            if model_path and model_path.exists():
-                # Local file validation
+        if not no_validate:
+            typer.echo("🔍 Validating local GGUF model...")
+            try:
                 validation_result = validator.validate_file(
-                    str(model_path),
-                    max_tokens=10,  # Quick validation test
+                    str(final_model_path),
+                    max_tokens=10,
                     n_ctx=context_size,
                 )
-            elif filename is not None:
-                # HuggingFace repo validation with optional cleanup
+                if not validation_result.passed:
+                    typer.echo(
+                        f"❌ Model validation failed: {validation_result.error}",
+                        err=True,
+                    )
+                    raise typer.Exit(1)
+                typer.echo("✅ Model validation passed")
+            except Exception as e:
+                typer.echo(f"❌ Validation error: {e}", err=True)
+                raise typer.Exit(1)
+
+    elif model_type == ModelType.HF_GGUF:
+        # Handle HuggingFace GGUF repositories (existing logic)
+        if not filename:
+            typer.echo(
+                "❌ Error: --filename required for HuggingFace GGUF models", err=True
+            )
+            raise typer.Exit(1)
+
+        if not no_validate:
+            typer.echo("🔍 Validating HuggingFace GGUF model...")
+            try:
                 validation_result = validator.validate_and_cleanup(
                     repo_id=model,
                     filename=filename,
-                    max_tokens=10,  # Quick validation test
+                    max_tokens=10,
                     cleanup=not no_cleanup,
                     n_ctx=context_size,
                 )
-            else:
-                typer.echo(
-                    "Error: For HuggingFace repos, you must specify --filename. "
-                    "For local files, ensure the file exists.",
-                    err=True,
-                )
+                if not validation_result.passed:
+                    typer.echo(
+                        f"❌ Model validation failed: {validation_result.error}",
+                        err=True,
+                    )
+                    raise typer.Exit(1)
+                typer.echo("✅ Model validation passed")
+            except Exception as e:
+                typer.echo(f"❌ Validation error: {e}", err=True)
                 raise typer.Exit(1)
 
-            if not validation_result.passed:
-                typer.echo(
-                    f"❌ Model validation failed: {validation_result.error}", err=True
-                )
-                raise typer.Exit(1)
-
-            typer.echo("✅ Model validation passed")
-            typer.echo(f"  Context length: {validation_result.context_length}")
-            typer.echo(f"  Vocabulary size: {validation_result.vocab_size:,}")
-            typer.echo(f"  Embedding size: {validation_result.embedding_size}")
-
-        except Exception as e:
-            typer.echo(f"❌ Validation error: {e}", err=True)
-            raise typer.Exit(1)
-
-    # Step 2: Determine model file path and capabilities
-    if model_path and model_path.exists():
-        # Local file
-        final_model_path = model_path
-    else:
-        # For HuggingFace models, we need to get the model path from the loader
-        # The validation process already downloaded it, but we need to get the path
+        # Get model path from loader
         try:
             typer.echo(f"📥 Preparing model from HuggingFace: {model}")
             loader = LlamaCppModelLoader()
-            # This will reuse the cached download from validation
             model_obj = loader.prepareFromHuggingFace(
                 repo_id=model, filename=filename, verbose=verbose, n_ctx=context_size
             )
-            # Extract the model path from the llama-cpp model object
             final_model_path = Path(model_obj.model_path)
         except Exception as e:
             typer.echo(f"❌ Failed to prepare model: {e}", err=True)
             raise typer.Exit(1)
+
+    elif model_type == ModelType.HF_PYTORCH:
+        # NEW: Handle HuggingFace PyTorch models with auto-conversion
+        typer.echo("🔄 Converting HuggingFace model to GGUF format...")
+
+        try:
+            # Get converter
+            converter = get_converter("gguf")
+
+            # Check if we can convert
+            if not converter.can_convert(model):
+                typer.echo(
+                    "❌ Cannot convert model: missing dependencies or unsupported architecture",
+                    err=True,
+                )
+                typer.echo(
+                    "Install conversion dependencies with: pip install alki[convert]"
+                )
+                raise typer.Exit(1)
+
+            # Create temporary directory for conversion
+            import tempfile
+
+            temp_dir = Path(tempfile.mkdtemp(prefix="alki_convert_"))
+
+            try:
+                # Convert the model
+                result = converter.convert(
+                    source=model,
+                    output_dir=temp_dir,
+                    quantizations=quantize,
+                    cleanup=not no_cleanup,
+                    timeout_minutes=30,
+                )
+
+                if not result.success:
+                    typer.echo(f"❌ Conversion failed: {result.error}", err=True)
+                    raise typer.Exit(1)
+
+                # Use the first converted file for packing
+                final_model_path = result.output_files[0]
+                typer.echo(f"✅ Conversion complete: {final_model_path.name}")
+
+                # Validate the converted GGUF file
+                if not no_validate:
+                    typer.echo("🔍 Validating converted GGUF model...")
+                    validation_result = validator.validate_file(
+                        str(final_model_path),
+                        max_tokens=10,
+                        n_ctx=context_size,
+                    )
+                    if not validation_result.passed:
+                        typer.echo(
+                            f"❌ Converted model validation failed: {validation_result.error}",
+                            err=True,
+                        )
+                        raise typer.Exit(1)
+                    typer.echo("✅ Converted model validation passed")
+
+            except Exception as conv_error:
+                # Clean up temp directory on error
+                import shutil
+
+                if temp_dir.exists():
+                    shutil.rmtree(temp_dir)
+                raise conv_error
+
+        except DependencyError as e:
+            typer.echo(f"❌ Missing dependencies: {e}", err=True)
+            typer.echo("Install with: pip install alki[convert]")
+            raise typer.Exit(1)
+        except ConversionError as e:
+            typer.echo(f"❌ Conversion failed: {e}", err=True)
+            raise typer.Exit(1)
+        except Exception as e:
+            typer.echo(f"❌ Unexpected error during conversion: {e}", err=True)
+            raise typer.Exit(1)
+
+    else:
+        typer.echo(
+            f"❌ Unsupported or unknown model type: {model_type.value}", err=True
+        )
+        raise typer.Exit(1)
+
+    if not final_model_path or not final_model_path.exists():
+        typer.echo("❌ No valid model file found after processing", err=True)
+        raise typer.Exit(1)
 
     # Step 3: Use validation results for capabilities or extract them
     if validation_result and not no_validate:
@@ -328,7 +435,9 @@ def pack(
     # Step 5: Add model to bundle
     typer.echo("➕ Adding model to bundle...")
     try:
-        artifact = bundle.add_model(final_model_path, quant)
+        # For converted models, use the first quantization; for existing GGUF, use None
+        quantization_info = quantize[0] if model_type == ModelType.HF_PYTORCH else None
+        artifact = bundle.add_model(final_model_path, quantization_info)
         typer.echo(f"  Added: {artifact.filename} ({artifact.size:,} bytes)")
     except Exception as e:
         typer.echo(f"❌ Failed to add model to bundle: {e}", err=True)
@@ -364,7 +473,9 @@ def pack(
 
     # Step 7: Add documentation
     typer.echo("📄 Creating documentation...")
-    bundle.add_readme(name, [quant] if quant else [])
+    # For converted models, include all quantizations; for existing GGUF, use empty list
+    quantization_list = quantize if model_type == ModelType.HF_PYTORCH else []
+    bundle.add_readme(name, quantization_list)
     bundle.add_license(
         "Please add the appropriate license for your model.\n"
         "Check the original model repository for license information."
