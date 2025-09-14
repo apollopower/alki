@@ -76,9 +76,9 @@ alki/
   core/             # HF→GGUF conversion, bundle packaging
   backends/         # runtime plugins (llama.cpp, Ollama, MLC, ONNX)
   converters/       # GGUF conversion and quantization
-  deploy/           # deployment recipe generators
+  deploy/           # deployment configuration generators
   validate/         # bundle validation & smoke tests
-  examples/         # model recipes and deployment configs
+  examples/         # model examples and deployment configs
 docker/             # container templates and Dockerfiles
 tests/              # pytest suite
 ```

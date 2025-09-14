@@ -56,9 +56,8 @@ Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., 
 - **CLI Interface** - `validate`, `pack`, `image`, and `publish` commands
 
 **🚧 Coming in Phase 1:**
-- **Direct HF → GGUF Conversion** - Convert any HuggingFace model seamlessly
+- **Direct HF → GGUF Conversion** ⚡ *Priority* - Convert any HuggingFace model seamlessly  
 - **Advanced Quantization** - Multiple profiles (Q4_K_M, Q5_K_M, Q8_0) in one command
-- **Recipe Generation** - `alki recipe` for deployment automation
 - **Performance Benchmarking** - Edge-optimized evaluation framework
 - **Enhanced Architecture Support** - Automatic detection and optimization
 
@@ -79,7 +78,6 @@ Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., 
 - [x] Bundle format with manifests and deployment configs
 - [x] Container image generation and registry publishing
 - [x] Multi-platform support (Docker, K8s, systemd)
-- [ ] **Recipe generation** (`alki recipe`)
 - [ ] **Performance benchmarking framework**
 - [ ] **End-to-end validation pipeline**
 
@@ -166,11 +164,8 @@ llama-server \
 # Or run with Docker
 docker run -p 8080:8080 acme/qwen3-0.6b:Q4
 
-# Generate deployment recipes
-alki recipe emit \
-  --bundle ./dist/qwen3-0.6b \
-  --target systemd \
-  --out ./dist/deploy/systemd
+# Use deployment configs from bundle
+cp ./dist/qwen3-0.6b/deploy/systemd/*.service /etc/systemd/system/
 ```
 
 ## 🎮 Runtime Inference
@@ -259,27 +254,40 @@ dist/qwen3-0.6b/
       Dockerfile                      # Container image definition
 ```
 
-## 🚀 Deployment Recipes
+## 🚀 Deployment Configurations
 
-Alki generates production-ready deployment configurations for various platforms:
+Alki automatically includes production-ready deployment configurations in every bundle:
 
-### Systemd (Bare Metal/Linux)
-```bash
-alki recipe emit --bundle ./dist/qwen3-0.6b --target systemd --out ./deploy
+### Bundle Structure
 ```
-Generates: `systemd/alki-qwen3.service` with proper service configuration, auto-restart, and resource limits.
-
-### Kubernetes/k3s
-```bash
-alki recipe emit --bundle ./dist/qwen3-0.6b --target k3s --out ./deploy
+dist/my-model/
+  deploy/
+    systemd/
+      alki-my-model.service    # Systemd service file
+    k3s/
+      deployment.yaml          # Kubernetes manifests
+    docker/
+      Dockerfile              # Docker configuration
 ```
-Generates: Deployment, Service, ConfigMap with health checks and horizontal pod autoscaling.
 
-### Docker/Containers
+### Using Deployment Configs
+
+**Systemd:**
 ```bash
-alki image build --bundle ./dist/qwen3-0.6b --runtime llama.cpp --tag acme/qwen3:Q4
+sudo cp ./dist/my-model/deploy/systemd/*.service /etc/systemd/system/
+sudo systemctl enable alki-my-model.service
+sudo systemctl start alki-my-model.service
 ```
-Creates optimized container images with llama-server, health endpoints, and proper security context.
+
+**Kubernetes:**
+```bash
+kubectl apply -f ./dist/my-model/deploy/k3s/
+```
+
+**Docker:**
+```bash
+docker build -f ./dist/my-model/deploy/docker/Dockerfile -t my-model .
+```
 
 ## 📋 Manifests
 

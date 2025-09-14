@@ -37,7 +37,6 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 - [x] `alki pack` - Bundle creation from GGUF models
 - [x] `alki image` - Container image generation (embedded model approach)
 - [x] `alki publish` - Bundle registry publishing for fleet deployments
-- [ ] **`alki recipe` - Deployment recipe generation** ⚡ *Priority*
 
 ### Runtime Integration
 - [x] GGUF model loading with llama-cpp-python
@@ -46,9 +45,9 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 - [ ] **Performance benchmarking framework** ⚡ *Priority*
 
 ### Deployment Support
-- [x] Systemd service configs
-- [x] Docker container configs  
-- [x] Kubernetes manifests
+- [x] Systemd service configs (auto-included in bundles)
+- [x] Docker container configs (auto-included in bundles)
+- [x] Kubernetes manifests (auto-included in bundles)
 - [ ] **Nomad job specifications**
 - [ ] **Hardware optimization profiles** (ARM, x86, GPU variants)
 
