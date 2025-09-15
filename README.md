@@ -2,7 +2,7 @@
 
 **An open-source toolchain for deploying LLMs at the edge with llama.cpp.**
 
-Alki takes a Hugging Face model, converts it to GGUF format, applies quantization (Q4_K_M, Q5_K_M, Q8_0), and produces production-ready deployment bundles that run efficiently on edge devices with minimal dependencies.
+Alki takes a Hugging Face model, converts it to GGUF format, applies quantization, and produces production-ready deployment bundles that run efficiently on edge devices with minimal dependencies.
 
 ## ✨ Goals
 
@@ -27,8 +27,11 @@ Alki currently provides:
 alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
 alki validate /path/to/local/model.gguf
 
-# Create deployment bundles
+# Create deployment bundles from pre-converted GGUF
 alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --name my-model
+
+# Or convert directly from HuggingFace PyTorch models
+alki pack "Qwen/Qwen2-0.5B" --quantize Q8_0 --name qwen2-model
 
 # Build container images
 alki image build ./dist/my-model --tag mymodel:latest
@@ -45,9 +48,11 @@ alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
 
 ## 📍 Current Development Status
 
-Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Qwen3-0.6B-GGUF`). We're actively developing direct HuggingFace model conversion to unlock the full vision.
+Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Qwen3-0.6B-GGUF`) and **direct HuggingFace model conversion** for supported architectures.
 
 **✅ Available now:**
+- **Pre-converted GGUF Models** - Full support with all quantization profiles (Q4_K_M, Q5_K_M, Q8_0)
+- **Direct HF → GGUF Conversion** - Convert supported PyTorch models (Qwen2, Llama, Mistral, etc.) with Q8_0 quantization
 - **GGUF Model Validation** - Comprehensive testing with inference validation
 - **Production Bundles** - Complete deployment packages with manifests and SBOMs
 - **Multi-Platform Deployment** - Docker, Kubernetes, and systemd configurations
@@ -56,10 +61,9 @@ Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., 
 - **CLI Interface** - `validate`, `pack`, `image`, and `publish` commands
 
 **🚧 Coming in Phase 1:**
-- **Direct HF → GGUF Conversion** ⚡ *Priority* - Convert any HuggingFace model seamlessly  
-- **Advanced Quantization** - Multiple profiles (Q4_K_M, Q5_K_M, Q8_0) in one command
+- **Extended Architecture Support** - Newer model architectures as llama.cpp adds support
 - **Performance Benchmarking** - Edge-optimized evaluation framework
-- **Enhanced Architecture Support** - Automatic detection and optimization
+- **End-to-end Validation Pipeline** - Automated testing and quality assurance
 
 ## 🎯 Development Roadmap
 
@@ -69,9 +73,9 @@ Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., 
 
 **Model Conversion & Optimization**
 - [x] Pre-converted GGUF model support
-- [ ] **Direct HF → GGUF conversion** *Priority*
-- [ ] **Pluggable converter architecture** 
-- [ ] **Multi-quantization workflows**
+- [x] **Direct HF → GGUF conversion** (Q8_0 quantization, supported architectures)
+- [x] **Pluggable converter architecture**
+- [ ] **Extended architecture support** (newer models as llama.cpp evolves)
 - [ ] **Architecture detection & optimization**
 
 **Production Deployment**
@@ -82,6 +86,11 @@ Alki currently works with **pre-converted GGUF models** from HuggingFace (e.g., 
 - [ ] **End-to-end validation pipeline**
 
 ### Phase 2: Advanced Capabilities 🚀 *Planned*
+
+**Advanced Model Processing**
+- [ ] Advanced quantization for direct conversion (Q4_K_M, Q5_K_M support)
+- [ ] Multi-quantization workflows (generate multiple profiles in one command)
+- [ ] Two-step quantization pipeline (HF → f16 → advanced quantization)
 
 **Ecosystem Integration**
 - [ ] Multi-runtime backends (Ollama, MLC-LLM, ONNX Runtime, TensorRT-LLM)
@@ -206,10 +215,18 @@ curl http://localhost:8080/health
 
 ## 🤖 Supported Models
 
-### GGUF Compatible Models
-Most modern transformer models with good llama.cpp support work out-of-the-box:
+### Pre-converted GGUF Models
+All pre-converted GGUF models from HuggingFace work with full quantization support:
 
-* **Qwen family** - Qwen2.5, Qwen3 series (excellent edge performance) ✅
+* **Qwen family** - Qwen2.5-GGUF, Qwen3-GGUF series (excellent edge performance) ✅
+* **Llama family** - Llama 2-GGUF, Llama 3/3.1/3.2-GGUF (all sizes) ✅
+* **Mistral family** - Mistral-7B-GGUF, Mistral-Nemo-GGUF, Codestral-GGUF ✅
+* **Phi family** - Phi-3-GGUF, Phi-3.5-GGUF (Microsoft's efficient models) ✅
+
+### Direct HF → GGUF Conversion
+For direct PyTorch model conversion (Q8_0 quantization):
+
+* **Qwen family** - Qwen2, Qwen2.5 series ✅
 * **Llama family** - Llama 2, Llama 3/3.1/3.2 (all sizes) ✅
 * **Mistral family** - Mistral 7B, Mistral Nemo, Codestral ✅
 * **Phi family** - Phi-3, Phi-3.5 (Microsoft's efficient models) ✅
@@ -219,17 +236,31 @@ Most modern transformer models with good llama.cpp support work out-of-the-box:
 
 ### Quantization Profiles
 
-* **Q4_K_M**: Edge-friendly default, ~4-bit quantization with good quality
-* **Q5_K_M**: Better quality, slightly larger size
-* **Q8_0**: High quality, larger size, good for development/benchmarking
+**For Pre-converted GGUF Models:**
+* **Q4_K_M**: Edge-friendly default, ~4-bit quantization with good quality ✅
+* **Q5_K_M**: Better quality, slightly larger size ✅
+* **Q8_0**: High quality, larger size, good for development/benchmarking ✅
+
+**For Direct HF → GGUF Conversion:**
+* **Q8_0**: High quality, currently supported for direct conversion ✅
+* **Q4_K_M, Q5_K_M**: Planned for Phase 2 (requires two-step quantization)
 
 ### Requirements
 
-* Models must have llama.cpp conversion support
-* HuggingFace models with proper tokenizer configuration
-* Respects model licensing and gating requirements
+**For Pre-converted GGUF Models:**
+* Any GGUF model from HuggingFace or local files
+* Proper tokenizer configuration (usually included)
 
-**Note**: Most modern transformer architectures work well. MoE (Mixture of Experts) and state-space models may have limited support depending on llama.cpp capabilities.
+**For Direct HF → GGUF Conversion:**
+* Model architecture supported by llama.cpp (current version: b4481)
+* HuggingFace models with proper tokenizer configuration
+* PyTorch or SafeTensors model weights
+
+**General:**
+* Respects model licensing and gating requirements
+* Install conversion dependencies: `pip install alki[convert]`
+
+**Note**: Architecture support for direct conversion depends on llama.cpp capabilities. Pre-converted GGUF models work regardless of architecture.
 
 ## 📦 Bundle Layout
 

@@ -8,6 +8,7 @@ to be compatible with the Alki plugin architecture.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+import shutil
 from typing import List, Dict, Any, Optional
 
 
@@ -112,8 +113,6 @@ class BaseConverter(ABC):
         Args:
             temp_dir: Directory containing temporary files
         """
-        import shutil
-
         if temp_dir.exists():
             shutil.rmtree(temp_dir)
 
