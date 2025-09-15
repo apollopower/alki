@@ -4,6 +4,7 @@ Unit tests for ModelDetector.
 Simple tests focused on core detection logic without heavy mocking.
 """
 
+import shutil
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -21,8 +22,6 @@ class TestModelDetector:
 
     def teardown_method(self):
         """Clean up test fixtures."""
-        import shutil
-
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 

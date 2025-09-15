@@ -4,6 +4,7 @@ Unit tests for GGUFConverter.
 Simple tests focused on core validation and mapping logic.
 """
 
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -20,8 +21,6 @@ class TestGGUFConverter:
 
     def teardown_method(self):
         """Clean up test fixtures."""
-        import shutil
-
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 

@@ -9,6 +9,7 @@ import typer
 from typing import Optional
 import logging
 import json
+import shutil
 from pathlib import Path
 
 try:
@@ -364,8 +365,6 @@ def pack(
 
             except Exception as conv_error:
                 # Clean up temp directory on error
-                import shutil
-
                 if temp_dir.exists():
                     shutil.rmtree(temp_dir)
                 raise conv_error

@@ -6,6 +6,7 @@ using llama.cpp conversion and quantization tools.
 """
 
 import logging
+import shutil
 from pathlib import Path
 from typing import List, Optional
 
@@ -257,8 +258,6 @@ class GGUFConverter(BaseConverter):
         try:
             # Only clean up if it looks like a HF cache directory
             if ".cache" in str(model_path) or "huggingface" in str(model_path):
-                import shutil
-
                 shutil.rmtree(model_path)
                 logger.debug(f"Cleaned up HF model cache: {model_path}")
             else:

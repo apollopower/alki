@@ -6,6 +6,7 @@ including downloading, caching, and version management.
 """
 
 import logging
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -43,7 +44,7 @@ class ToolManager:
     """
 
     # Pinned version of llama.cpp for stability
-    TOOL_VERSION = "b4481"  # Specific commit hash for reproducibility
+    TOOL_VERSION = "b907255f4bd169b0dc7dca9553b4c54af5170865"  # 2025-09-15: SYCL: Add COUNT_EQUAL operator support - https://github.com/ggml-org/llama.cpp/commit/b907255f4bd169b0dc7dca9553b4c54af5170865
 
     # Configuration for conversion script
     # TODO: Add proper SHA256 verification with hash caching for security
@@ -321,8 +322,6 @@ class ToolManager:
     def clear_cache(self) -> None:
         """Clear all cached tools."""
         if self.tools_dir.exists():
-            import shutil
-
             shutil.rmtree(self.tools_dir)
             self.tools_dir.mkdir(parents=True, exist_ok=True)
             logger.info("Tool cache cleared")
