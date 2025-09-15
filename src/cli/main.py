@@ -23,7 +23,6 @@ try:
     from ..core.tool_manager import DependencyError, ConversionError
     from ..converters import get_converter
 except ImportError:
-    # Handle case when running as a script
     from core.validator import GGUFValidator
     from core.bundle import Bundle
     from core.manifest import ManifestGenerator, ModelInfo
@@ -167,10 +166,10 @@ def pack(
         help="Bundle name (derived from model if not provided)",
     ),
     quantize: list[str] = typer.Option(
-        ["Q4_K_M"],
+        ["Q8_0"],
         "--quantize",
         "-q",
-        help="Quantization profiles for HuggingFace model conversion (e.g., Q4_K_M,Q5_K_M)",
+        help="Quantization profiles for HuggingFace model conversion (currently supports Q8_0)",
     ),
     context_size: int = typer.Option(
         2048,
@@ -230,19 +229,16 @@ def pack(
     typer.echo(f"Bundle name: {name}")
     typer.echo(f"Output directory: {output_dir}")
 
-    # Step 1: Detect model type and source
     detector = ModelDetector()
     model_type = detector.detect_model_type(model, filename)
 
     typer.echo(f"🔍 Detected model type: {model_type.value}")
 
-    # Step 2: Handle model based on type
     validator = GGUFValidator()
     validation_result = None
     final_model_path = None
 
     if model_type == ModelType.LOCAL_GGUF:
-        # Handle local GGUF files (existing logic)
         final_model_path = model_path
 
         if not no_validate:
@@ -265,7 +261,6 @@ def pack(
                 raise typer.Exit(1)
 
     elif model_type == ModelType.HF_GGUF:
-        # Handle HuggingFace GGUF repositories (existing logic)
         if not filename:
             typer.echo(
                 "❌ Error: --filename required for HuggingFace GGUF models", err=True
@@ -293,7 +288,6 @@ def pack(
                 typer.echo(f"❌ Validation error: {e}", err=True)
                 raise typer.Exit(1)
 
-        # Get model path from loader
         try:
             typer.echo(f"📥 Preparing model from HuggingFace: {model}")
             loader = LlamaCppModelLoader()
@@ -306,14 +300,11 @@ def pack(
             raise typer.Exit(1)
 
     elif model_type == ModelType.HF_PYTORCH:
-        # NEW: Handle HuggingFace PyTorch models with auto-conversion
         typer.echo("🔄 Converting HuggingFace model to GGUF format...")
 
         try:
-            # Get converter
             converter = get_converter("gguf")
 
-            # Check if we can convert
             if not converter.can_convert(model):
                 typer.echo(
                     "❌ Cannot convert model: missing dependencies or unsupported architecture",
@@ -324,13 +315,11 @@ def pack(
                 )
                 raise typer.Exit(1)
 
-            # Create temporary directory for conversion
             import tempfile
 
             temp_dir = Path(tempfile.mkdtemp(prefix="alki_convert_"))
 
             try:
-                # Convert the model
                 result = converter.convert(
                     source=model,
                     output_dir=temp_dir,
@@ -343,11 +332,9 @@ def pack(
                     typer.echo(f"❌ Conversion failed: {result.error}", err=True)
                     raise typer.Exit(1)
 
-                # Use the first converted file for packing
                 final_model_path = result.output_files[0]
                 typer.echo(f"✅ Conversion complete: {final_model_path.name}")
 
-                # Validate the converted GGUF file
                 if not no_validate:
                     typer.echo("🔍 Validating converted GGUF model...")
                     validation_result = validator.validate_file(
@@ -364,7 +351,6 @@ def pack(
                     typer.echo("✅ Converted model validation passed")
 
             except Exception as conv_error:
-                # Clean up temp directory on error
                 if temp_dir.exists():
                     shutil.rmtree(temp_dir)
                 raise conv_error
@@ -390,7 +376,6 @@ def pack(
         typer.echo("❌ No valid model file found after processing", err=True)
         raise typer.Exit(1)
 
-    # Step 3: Use validation results for capabilities or extract them
     if validation_result and not no_validate:
         # Use capabilities from validation
         capabilities = {
@@ -398,7 +383,6 @@ def pack(
             "vocab_size": validation_result.vocab_size,
             "embedding_size": validation_result.embedding_size,
         }
-        # Use extracted context length if it's available and larger than our CLI parameter
         model_context = validation_result.context_length
         actual_context = (
             max(context_size, model_context)
@@ -406,7 +390,6 @@ def pack(
             else context_size
         )
     else:
-        # Extract capabilities using ManifestGenerator (fallback)
         typer.echo("🔍 Extracting model capabilities...")
         generator = ManifestGenerator()
         capabilities = generator.extract_model_capabilities(final_model_path)
@@ -414,7 +397,6 @@ def pack(
         if capabilities:
             typer.echo(f"  Context length: {capabilities['context_length']}")
             typer.echo(f"  Vocabulary size: {capabilities['vocab_size']}")
-            # Use extracted context length if it's available and larger than our CLI parameter
             model_context = capabilities.get("context_length")
             actual_context = (
                 max(context_size, model_context)
@@ -426,15 +408,12 @@ def pack(
             capabilities = {"context_length": context_size}
             actual_context = context_size
 
-    # Step 4: Create bundle
     typer.echo("📦 Creating bundle structure...")
     bundle = Bundle(output_dir, name)
     bundle.create_structure()
 
-    # Step 5: Add model to bundle
     typer.echo("➕ Adding model to bundle...")
     try:
-        # For converted models, use the first quantization; for existing GGUF, use None
         quantization_info = quantize[0] if model_type == ModelType.HF_PYTORCH else None
         artifact = bundle.add_model(final_model_path, quantization_info)
         typer.echo(f"  Added: {artifact.filename} ({artifact.size:,} bytes)")
@@ -442,7 +421,6 @@ def pack(
         typer.echo(f"❌ Failed to add model to bundle: {e}", err=True)
         raise typer.Exit(1)
 
-    # Step 6: Create model info and manifests
     typer.echo("📝 Generating manifests...")
 
     model_info = ModelInfo(
@@ -458,7 +436,6 @@ def pack(
     chat_template = generator.detect_chat_template(name)
     typer.echo(f"  Chat template: {chat_template}")
 
-    # Create manifests
     bundle.create_manifest(
         artifacts=[artifact],
         template=chat_template,
@@ -470,9 +447,7 @@ def pack(
     bundle.create_runtime_manifest()
     bundle.create_sbom()
 
-    # Step 7: Add documentation
     typer.echo("📄 Creating documentation...")
-    # For converted models, include all quantizations; for existing GGUF, use empty list
     quantization_list = quantize if model_type == ModelType.HF_PYTORCH else []
     bundle.add_readme(name, quantization_list)
     bundle.add_license(
@@ -480,10 +455,8 @@ def pack(
         "Check the original model repository for license information."
     )
 
-    # Step 8: Create deployment configs
     typer.echo("🚀 Creating deployment configurations...")
 
-    # Use the actual model filename from the artifact
     model_filename = artifact.uri.split("/")[-1]
 
     # Systemd service
@@ -504,7 +477,6 @@ def pack(
     )
     (bundle.deploy_dir / "k3s" / "deployment.yaml").write_text(k8s_config)
 
-    # Step 9: Verify bundle
     typer.echo("🔍 Verifying bundle integrity...")
     if bundle.verify_bundle():
         typer.echo("✅ Bundle verification passed")
@@ -512,7 +484,6 @@ def pack(
         typer.echo("❌ Bundle verification failed", err=True)
         raise typer.Exit(1)
 
-    # Step 10: Show bundle info
     info = bundle.get_info()
     typer.echo("\n🎉 Bundle created successfully!")
     typer.echo(f"  Name: {info['name']}")
@@ -597,7 +568,6 @@ def publish(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Validate parameters
     if not local and not registry:
         typer.echo(
             "❌ Error: Either --registry must be specified or --local flag must be used",
@@ -626,7 +596,6 @@ def publish(
 
     bundle_path = Path(bundle)
 
-    # Validate bundle path
     if not bundle_path.exists():
         typer.echo(f"❌ Bundle path does not exist: {bundle_path}", err=True)
         raise typer.Exit(1)

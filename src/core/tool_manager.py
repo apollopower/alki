@@ -44,7 +44,8 @@ class ToolManager:
     """
 
     # Pinned version of llama.cpp for stability
-    TOOL_VERSION = "b907255f4bd169b0dc7dca9553b4c54af5170865"  # 2025-09-15: SYCL: Add COUNT_EQUAL operator support - https://github.com/ggml-org/llama.cpp/commit/b907255f4bd169b0dc7dca9553b4c54af5170865
+    # 2025-09-15: SYCL: Add COUNT_EQUAL operator support - https://github.com/ggml-org/llama.cpp/commit/b907255f4bd169b0dc7dca9553b4c54af5170865
+    TOOL_VERSION = "b907255f4bd169b0dc7dca9553b4c54af5170865"
 
     # Configuration for conversion script
     # TODO: Add proper SHA256 verification with hash caching for security

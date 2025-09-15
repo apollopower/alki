@@ -149,16 +149,13 @@ class GGUFConverter(BaseConverter):
         cleanup_hf_model = kwargs.get("cleanup", True)
 
         try:
-            # Step 1: Download HuggingFace model
             logger.info(f"Downloading model from HuggingFace: {source}")
             hf_model_path = Path(snapshot_download(source))
             logger.debug(f"Model downloaded to: {hf_model_path}")
 
-            # Step 2: Get conversion tool
             logger.info("Ensuring conversion tool is available...")
             script_path = self.tool_manager.ensure_conversion_tool()
 
-            # Step 3: Convert for each quantization profile
             for i, quant in enumerate(quantizations):
                 logger.info(
                     f"Converting with quantization {quant} ({i+1}/{len(quantizations)})"

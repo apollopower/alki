@@ -12,7 +12,6 @@ from pathlib import Path
 import tempfile
 import argparse
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.core.bundle import Bundle, BundleArtifact
@@ -60,7 +59,6 @@ def create_bundle_from_gguf(
     
     logger.info(f"Creating bundle '{bundle_name}' from {model_path.name}")
     
-    # Validate model if requested
     if validate:
         logger.info("Validating GGUF model...")
         validator = GGUFValidator()
@@ -75,7 +73,6 @@ def create_bundle_from_gguf(
         logger.info(f"  Vocab size: {result.vocab_size}")
         logger.info(f"  Embedding size: {result.embedding_size}")
     
-    # Extract model capabilities
     generator = ManifestGenerator()
     capabilities = generator.extract_model_capabilities(model_path)
     
@@ -87,16 +84,13 @@ def create_bundle_from_gguf(
         logger.warning("Could not extract model capabilities. Using defaults.")
         capabilities = {"context_length": 2048}  # Safe default
     
-    # Create bundle
     logger.info(f"Creating bundle structure...")
     bundle = Bundle(output_dir, bundle_name)
     bundle.create_structure()
     
-    # Add model to bundle
     logger.info(f"Adding model to bundle...")
     artifact = bundle.add_model(model_path, quantization)
     
-    # Create model info
     model_info = ModelInfo(
         architecture="GGUF",
         context_length=capabilities.get("context_length"),
@@ -121,27 +115,21 @@ def create_bundle_from_gguf(
         context_size=capabilities.get("context_length", 2048)
     )
     
-    # Runtime manifest
     bundle.create_runtime_manifest()
     
-    # SBOM
     bundle.create_sbom()
     
-    # README
     bundle.add_readme(bundle_name, [quantization])
     
-    # License placeholder
     bundle.add_license(
         "Please add the appropriate license for your model.\n"
         "Check the original model repository for license information."
     )
     
-    # Create deployment configs
     logger.info("Creating deployment configurations...")
     
     model_filename = f"{bundle_name}-{quantization.lower()}.gguf"
     
-    # Systemd service
     systemd_config = generator.create_deployment_placeholder(
         "systemd",
         bundle_name,
@@ -151,7 +139,6 @@ def create_bundle_from_gguf(
     )
     (bundle.deploy_dir / "systemd" / f"alki-{bundle_name}.service").write_text(systemd_config)
     
-    # Docker
     docker_config = generator.create_deployment_placeholder(
         "docker",
         bundle_name,
@@ -161,7 +148,6 @@ def create_bundle_from_gguf(
     )
     (bundle.deploy_dir / "docker" / "Dockerfile").write_text(docker_config)
     
-    # Verify bundle
     logger.info("Verifying bundle integrity...")
     if bundle.verify_bundle():
         logger.info("✅ Bundle created successfully!")
@@ -216,7 +202,6 @@ def test_with_huggingface_model():
         if success:
             logger.info("✅ Test bundle creation successful!")
             
-            # List created files
             bundle_dir = output_dir / "test-model"
             logger.info(f"\nCreated files:")
             for file in bundle_dir.rglob("*"):
@@ -270,7 +255,6 @@ def main():
         # Run test mode
         test_with_huggingface_model()
     elif args.model:
-        # Create bundle from provided model
         success = create_bundle_from_gguf(
             args.model,
             args.output,

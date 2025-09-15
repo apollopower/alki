@@ -42,7 +42,6 @@ class TestGGUFConverter:
 
     def test_validate_output_valid_gguf(self):
         """Test GGUF validation with valid file."""
-        # Create a file with GGUF magic bytes
         gguf_file = self.temp_dir / "valid.gguf"
         gguf_file.write_bytes(b"GGUF" + b"\x00" * 100)  # GGUF header + content
 
@@ -50,7 +49,6 @@ class TestGGUFConverter:
 
     def test_validate_output_invalid_gguf(self):
         """Test GGUF validation with invalid magic bytes."""
-        # Create a file with wrong magic bytes
         invalid_file = self.temp_dir / "invalid.gguf"
         invalid_file.write_bytes(b"NOTGGUF\x00\x00\x01")
 

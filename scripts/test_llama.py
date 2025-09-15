@@ -38,10 +38,8 @@ def cleanup_model_cache(repo_id: str):
         logger.info("CLEANING UP MODEL CACHE")
         logger.info("=" * 50)
 
-        # Get cache info
         cache_info = scan_cache_dir()
 
-        # Find the repo in cache
         repo_found = False
         for repo in cache_info.repos:
             if repo.repo_id == repo_id:
@@ -74,7 +72,6 @@ def test_llama_model(repo_id: str, filename: str):
     logger.info(f"Filename pattern: {filename}")
 
     try:
-        # Initialize the loader
         loader = LlamaCppModelLoader()
 
         # Load the model
@@ -108,7 +105,6 @@ def test_llama_model(repo_id: str, filename: str):
         logger.info("Response generated successfully!")
         logger.info(f"Generated text: '{response['choices'][0]['text'].strip()}'")
 
-        # Additional model metadata if available
         logger.info("\n" + "=" * 50)
         logger.info("ADDITIONAL MODEL METADATA")
         logger.info("=" * 50)
@@ -171,7 +167,6 @@ def main():
     if success:
         logger.info("All tests passed! 🎉")
         if not args.no_cleanup:
-            # Clean up the model cache after successful test
             cleanup_model_cache(args.repo_id)
         else:
             logger.info("Skipping cache cleanup (--no-cleanup flag used)")

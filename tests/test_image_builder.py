@@ -23,11 +23,9 @@ class TestImageBuilder:
         metadata_dir.mkdir(parents=True)
         models_dir.mkdir(parents=True)
 
-        # Create model file
         model_file = models_dir / "test-model-q4_k_m.gguf"
         model_file.write_bytes(b"GGUF" + b"\x00" * 1000)
 
-        # Create manifest
         manifest = {
             "artifacts": [
                 {

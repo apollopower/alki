@@ -27,7 +27,6 @@ class TestModelDetector:
 
     def test_detect_local_gguf_file(self):
         """Test detection of local GGUF files."""
-        # Create a GGUF file
         gguf_file = self.temp_dir / "model.gguf"
         gguf_file.write_text("test content")
 
@@ -36,7 +35,6 @@ class TestModelDetector:
 
     def test_detect_local_non_gguf_file(self):
         """Test detection of local non-GGUF files."""
-        # Create a non-GGUF file
         txt_file = self.temp_dir / "model.txt"
         txt_file.write_text("test content")
 
