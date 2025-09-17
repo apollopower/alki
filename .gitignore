@@ -15,6 +15,9 @@ Claude.local.md
 # Internal Strategy Documents
 OPEN_SOURCE_STRATEGY.md
 
+# local docs
+ignore_*.md
+
 # ONNX Export Outputs
 onnx_output/
 *.onnx
