@@ -62,7 +62,7 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 
 **🚧 Coming in Phase 1:**
 - **Extended Architecture Support** - Newer model architectures as llama.cpp adds support
-- **Performance Benchmarking** - Edge-optimized evaluation framework
+- **Performance Benchmarking** - Pre-deployment model evaluation for edge hardware compatibility
 - **End-to-end Validation Pipeline** - Automated testing and quality assurance
 
 ## 🎯 Development Roadmap
@@ -82,7 +82,7 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 - [x] Bundle format with manifests and deployment configs
 - [x] Container image generation and registry publishing
 - [x] Multi-platform support (Docker, K8s, systemd)
-- [ ] **Performance benchmarking framework**
+- [ ] **Performance benchmarking framework** - Evaluate models before edge deployment
 - [ ] **End-to-end validation pipeline**
 
 ### Phase 2: Advanced Capabilities 🚀 *Planned*
@@ -96,11 +96,6 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 - [ ] Multi-runtime backends (Ollama, MLC-LLM, ONNX Runtime, TensorRT-LLM)
 - [ ] Hardware-specific optimization (Jetson, Apple Silicon, x86)
 - [ ] Cloud provider integrations
-
-**Enterprise Features**
-- [ ] Fleet management and A/B deployment orchestration
-- [ ] Advanced monitoring and analytics
-- [ ] Security and compliance enhancements
 
 **See [ROADMAP.md](ROADMAP.md) for complete roadmap and Phase 3 ecosystem plans.**
 

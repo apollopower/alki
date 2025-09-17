@@ -42,7 +42,7 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 - [x] GGUF model loading with llama-cpp-python
 - [x] Model capability extraction (context, vocab, embedding size)
 - [ ] **Production llama-server integration and wrapping**
-- [ ] **Performance benchmarking framework** ⚡ *Priority*
+- [ ] **Performance benchmarking framework** - Local benchmarking for pre-deployment model evaluation ⚡ *Priority*
 
 ### Deployment Support
 - [x] Systemd service configs (auto-included in bundles)
@@ -70,7 +70,7 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 
 ### Local Deployment Optimization
 - [ ] Local model serving optimization (batching, caching)
-- [ ] Resource usage monitoring for single nodes
+- [ ] Basic resource usage visibility for single nodes
 - [ ] Basic deployment health checks
 - [ ] Configuration validation and testing
 
@@ -110,6 +110,7 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 - [ ] Helm charts for Kubernetes deployments
 - [ ] Docker Compose templates
 - [ ] Configuration validation tools
+- [ ] Integration hooks for enterprise monitoring platforms
 
 ### Developer Experience
 - [ ] Model performance profiling tools
