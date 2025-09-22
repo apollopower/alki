@@ -4,14 +4,15 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 
 ## 🎯 Open Source Scope
 
-**Alki open source provides the complete technical foundation for edge LLM deployment:**
+**Alki open source provides the complete technical foundation for edge AI deployment:**
 
-- ✅ **Core Conversion**: HF → GGUF conversion with quantization
+- ✅ **Core Conversion & Optimization**: HF → GGUF conversion with advanced quantization
 - ✅ **Single-Node Deployment**: Complete deployment solution for individual devices/servers
-- ✅ **Developer Tools**: CLI, validation, testing, and development utilities  
-- ✅ **Platform Support**: Broad hardware and OS compatibility
+- ✅ **Developer Tools**: CLI, validation, testing, and development utilities
+- ✅ **Platform Support**: Broad hardware and OS compatibility with optimization
 - ✅ **Community Runtimes**: Integration with popular open-source runtimes
 - ✅ **Standard Deployment**: Docker, Kubernetes, systemd configurations
+- ✅ **Basic Fleet Management**: Simple multi-device deployment capabilities
 
 **What's included**: Everything needed to deploy LLMs from development to production on individual devices or small clusters.
 
@@ -68,27 +69,27 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 - [ ] Calibration datasets for improved accuracy
 - [ ] Mixed-precision quantization strategies
 
-### Local Deployment Optimization
-- [ ] Local model serving optimization (batching, caching)
-- [ ] Basic resource usage visibility for single nodes
-- [ ] Basic deployment health checks
-- [ ] Configuration validation and testing
+### Enhanced Developer Experience
+- [ ] Performance profiling and optimization tools
+- [ ] Advanced deployment templates and examples
+- [ ] Integration with popular development workflows
+- [ ] Improved error handling and debugging capabilities
 
-### Performance Optimization
-- [ ] Hardware-specific optimization (AVX, NEON, GPU acceleration)
-- [ ] Model compilation and optimization for edge devices
-- [ ] Memory usage optimization for resource-constrained devices
-- [ ] Thermal and power management integration
+### Hardware Optimization
+- [ ] Hardware-specific optimization profiles (AVX, NEON, GPU acceleration)
+- [ ] Automatic model selection based on device capabilities
+- [ ] Performance tuning for resource-constrained devices
+- [ ] Thermal and power management for sustainable operation
 
-### Security & Compliance
+### Security & Validation
 - [ ] Bundle signing and verification (Sigstore/cosign)
 - [ ] Supply chain security features
-- [ ] Audit logging and compliance reporting
+- [ ] Enhanced model validation and testing
 - [ ] Secure model distribution
 
-## 🔌 Phase 3 (And Beyond): Ecosystem & Integrations
+## 🔌 Phase 3 (And Beyond): Ecosystem & Advanced Integrations
 
-**Status**: Future - Ecosystem expansion and integrations.
+**Status**: Future - Ecosystem expansion and advanced platform integrations.
 
 ### Runtime Backends
 - [ ] Ollama integration (auto-generate Modelfile)
@@ -110,7 +111,7 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 - [ ] Helm charts for Kubernetes deployments
 - [ ] Docker Compose templates
 - [ ] Configuration validation tools
-- [ ] Integration hooks for enterprise monitoring platforms
+- [ ] Integration hooks for monitoring platforms
 
 ### Developer Experience
 - [ ] Model performance profiling tools
@@ -122,20 +123,22 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 
 We welcome contributions across all phases, especially:
 
-- **Phase 1 completion**: Help us reach v1.0 by implementing core features
+- **Phase 1 completion**: Help us reach v1.0 by implementing core orchestration features
+- **Fleet management**: Build tools for multi-device deployment and monitoring
 - **Model testing**: Validate with different GGUF-compatible architectures
-- **Documentation**: Deployment guides and best practices
+- **Documentation**: Deployment guides and fleet management best practices
 - **Platform support**: Testing on various edge devices and platforms
-- **Performance optimization**: Hardware-specific improvements
+- **Observability**: Edge-native monitoring and analytics capabilities
 
 ## Vision
 
-Alki aims to be the **standard toolchain for edge LLM deployment**, providing:
+Alki aims to be the **Kubernetes for Edge AI**, providing:
 
 1. **Simplicity**: One command from HuggingFace to optimized edge deployment
-2. **Production-ready**: Battle-tested components for reliable fleet deployments  
-3. **Hardware agnostic**: Broad compatibility from Raspberry Pi to data centers
-4. **Open ecosystem**: Extensible architecture for community-driven innovation
+2. **Fleet Intelligence**: Sophisticated orchestration and management at scale
+3. **Production-ready**: Battle-tested components for reliable enterprise deployments
+4. **Hardware agnostic**: Broad compatibility from Raspberry Pi to data centers
+5. **Edge-native observability**: Comprehensive monitoring without cloud dependency
 
 ## Getting Involved
 

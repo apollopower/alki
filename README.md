@@ -1,15 +1,16 @@
 # Alki 🌊
 
-**An open-source toolchain for deploying LLMs at the edge with llama.cpp.**
+**A toolchain for deploying and managing LLMs at the edge with llama.cpp.**
 
-Alki takes a Hugging Face model, converts it to GGUF format, applies quantization, and produces production-ready deployment bundles that run efficiently on edge devices with minimal dependencies.
+Alki takes a Hugging Face model, converts it to GGUF format, applies quantization, and produces production-ready deployment bundles that run efficiently on edge devices. Supports single-device deployments and fleet-scale orchestration.
 
 ## ✨ Goals
 
 * **Simple**: One command from HuggingFace to optimized GGUF bundle.
 * **Portable**: CPU/GPU support via llama.cpp runtime with broad hardware compatibility.
 * **Production-ready**: Containers, systemd units, and deployment manifests included.
-* **A/B safe**: Versioned bundles with registry publishing for reliable fleet deployments and gradual rollouts.
+* **Fleet Intelligence**: Orchestrate deployments across hundreds of edge devices with A/B testing.
+* **Edge-Native**: Real-time monitoring and optimization without cloud dependency.
 
 ## ✅ Current Capabilities
 
@@ -61,9 +62,9 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 - **CLI Interface** - `validate`, `pack`, `image`, and `publish` commands
 
 **🚧 Coming in Phase 1:**
-- **Extended Architecture Support** - Newer model architectures as llama.cpp adds support
-- **Performance Benchmarking** - Pre-deployment model evaluation for edge hardware compatibility
-- **End-to-end Validation Pipeline** - Automated testing and quality assurance
+- **Advanced Quantization Support** - Q4_K_M/Q5_K_M for optimal edge performance
+- **Emulated Performance Benchmarking** - Estimate performance before deployment
+- **Hardware Optimization Profiles** - Automatic tuning for common edge devices
 
 ## 🎯 Development Roadmap
 
@@ -87,15 +88,17 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 
 ### Phase 2: Advanced Capabilities 🚀 *Planned*
 
-**Advanced Model Processing**
-- [ ] Advanced quantization for direct conversion (Q4_K_M, Q5_K_M support)
-- [ ] Multi-quantization workflows (generate multiple profiles in one command)
-- [ ] Two-step quantization pipeline (HF → f16 → advanced quantization)
+**Enhanced Model Support**
+- [ ] Multi-runtime backends (Ollama, MLC-LLM, ONNX Runtime)
+- [ ] Additional model architectures as llama.cpp evolves
+- [ ] Custom quantization profiles and calibration datasets
+- [ ] Multi-modal model support (vision-language models)
 
-**Ecosystem Integration**
-- [ ] Multi-runtime backends (Ollama, MLC-LLM, ONNX Runtime, TensorRT-LLM)
+**Developer Experience**
 - [ ] Hardware-specific optimization (Jetson, Apple Silicon, x86)
-- [ ] Cloud provider integrations
+- [ ] Advanced deployment configurations and templates
+- [ ] Performance profiling and optimization tools
+- [ ] Integration with popular development workflows
 
 **See [ROADMAP.md](ROADMAP.md) for complete roadmap and Phase 3 ecosystem plans.**
 
@@ -454,19 +457,6 @@ Free to use, modify, and contribute.
 
 ## 🤝 Contributing
 
-Alki is actively developed and contributions are very welcome! We especially need help with:
-
-**Phase 1 Priorities** ⚡
-* **HF → GGUF Conversion** - Help implement the core conversion pipeline
-* **Performance Benchmarking** - Build edge-specific evaluation frameworks  
-* **Recipe Generation** - Complete deployment automation features
-* **Model Testing** - Validate with different GGUF architectures
-* **Documentation** - Improve guides and examples
-
-**Future Contributions**
-* Additional runtime backends (Ollama, MLC-LLM, TensorRT-LLM)
-* Hardware platform support (Jetson, Apple MLX, WebAssembly)
-* Fleet management and deployment orchestration
-* Security and compliance enhancements
+Alki is actively developed and contributions are very welcome!
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.

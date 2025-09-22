@@ -89,7 +89,7 @@ Alki is focused on production-ready LLM deployment at the edge with llama.cpp. C
 
 * **Runtime backends**: Additional backends (Ollama, MLC-LLM, TensorRT-LLM)
 * **Deployment targets**: Platform support (Jetson, Apple MLX, Android QNN, WebAssembly)
-* **Fleet management**: A/B deployment tools and control planes
+* **Deployment automation**: Better deployment configurations and tooling
 * **Benchmarking**: Validation frameworks and performance measurement
 * **Model support**: Testing with new GGUF-compatible architectures
 * **Documentation**: Deployment guides, tutorials, and best practices
