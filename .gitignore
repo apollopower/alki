@@ -12,9 +12,6 @@ __pycache__/
 .vscode
 Claude.local.md
 
-# Internal Strategy Documents
-OPEN_SOURCE_STRATEGY.md
-
 # local docs
 ignore_*.md
 
