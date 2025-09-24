@@ -1,6 +1,6 @@
 # Alki 🌊
 
-**A toolchain for deploying and managing LLMs at the edge with llama.cpp.**
+**A toolchain for deploying and managing LLMs at the edge.**
 
 Alki takes a Hugging Face model, converts it to GGUF format, applies quantization, and produces production-ready deployment bundles that run efficiently on edge devices. Supports single-device deployments and fleet-scale orchestration.
 
@@ -28,6 +28,9 @@ Alki currently provides:
 alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf"
 alki validate /path/to/local/model.gguf
 
+# Benchmark model performance before deployment
+alki validate model.gguf --benchmark
+
 # Create deployment bundles from pre-converted GGUF
 alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --name my-model
 
@@ -42,9 +45,9 @@ alki image test mymodel:latest
 alki publish ./dist/my-model --local                          # Local build only
 alki publish ./dist/my-model --registry myregistry.com/ai    # Push to registry
 
-# With custom options
+# With custom options and benchmarking
 alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" \
-  --prompt "Explain machine learning" --max-tokens 50 --no-cleanup
+  --prompt "Explain machine learning" --max-tokens 50 --benchmark --no-cleanup
 ```
 
 ## 📍 Current Development Status
@@ -55,6 +58,7 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 - **Pre-converted GGUF Models** - Full support with all quantization profiles (Q4_K_M, Q5_K_M, Q8_0)
 - **Direct HF → GGUF Conversion** - Convert supported PyTorch models (Qwen2, Llama, Mistral, etc.) with Q8_0 quantization
 - **GGUF Model Validation** - Comprehensive testing with inference validation
+- **Performance Benchmarking** - Measure tokens/sec, memory usage, and inference speed before deployment
 - **Production Bundles** - Complete deployment packages with manifests and SBOMs
 - **Multi-Platform Deployment** - Docker, Kubernetes, and systemd configurations
 - **Container Images** - Optimized images with llama-server runtime
@@ -63,7 +67,6 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 
 **🚧 Coming in Phase 1:**
 - **Advanced Quantization Support** - Q4_K_M/Q5_K_M for optimal edge performance
-- **Emulated Performance Benchmarking** - Estimate performance before deployment
 - **Hardware Optimization Profiles** - Automatic tuning for common edge devices
 
 ## 🎯 Development Roadmap
@@ -83,7 +86,7 @@ Alki supports both **pre-converted GGUF models** from HuggingFace (e.g., `Qwen/Q
 - [x] Bundle format with manifests and deployment configs
 - [x] Container image generation and registry publishing
 - [x] Multi-platform support (Docker, K8s, systemd)
-- [ ] **Performance benchmarking framework** - Evaluate models before edge deployment
+- [x] **Performance benchmarking framework** - Evaluate models before edge deployment
 - [ ] **End-to-end validation pipeline**
 
 ### Phase 2: Advanced Capabilities 🚀 *Planned*
@@ -185,7 +188,7 @@ curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "qwen3-0.6b-instruct",
-    "messages": [{"role": "user", "content": "Tell me about Alki beach in Seattle, WA?"}],
+    "messages": [{"role": "user", "content": "Tell me about Alki beach in Seattle, WA"}],
     "max_tokens": 100,
     "temperature": 0.8
   }'
@@ -196,7 +199,7 @@ client = openai.OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed"
 
 response = client.chat.completions.create(
     model="qwen3-0.6b-instruct",
-    messages=[{"role": "user", "content": "Hello, how are you?"}],
+    messages=[{"role": "user", "content": "Tell me about Alki beach in Seattle, WA"}],
     max_tokens=100
 )
 ```

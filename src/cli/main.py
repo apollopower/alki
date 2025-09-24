@@ -92,6 +92,12 @@ def validate(
         "-c",
         help="Context window size in tokens (default: 512, max depends on model)",
     ),
+    benchmark: bool = typer.Option(
+        False,
+        "--benchmark",
+        "-b",
+        help="Enable detailed performance benchmarking",
+    ),
 ):
     """
     Validate a GGUF model to ensure it loads and runs correctly.
@@ -101,6 +107,7 @@ def validate(
         alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*q8_0.gguf"
         alki validate "Qwen/Qwen2-0.5B-Instruct-GGUF" -f "*q8_0.gguf" --max-tokens 50
         alki validate "Qwen/Qwen3-0.6B-GGUF" -f "*Q8_0.gguf" --no-cleanup
+        alki validate model.gguf --benchmark
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -111,7 +118,7 @@ def validate(
     if Path(model).exists() and filename is None:
         # Local file validation
         result = validator.validate_file(
-            model, max_tokens=max_tokens, n_ctx=context_size
+            model, max_tokens=max_tokens, n_ctx=context_size, benchmark=benchmark
         )
     elif filename is not None:
         # HuggingFace repo validation with optional cleanup
@@ -121,6 +128,7 @@ def validate(
             max_tokens=max_tokens,
             cleanup=not no_cleanup,
             n_ctx=context_size,
+            benchmark=benchmark,
         )
     else:
         typer.echo(
