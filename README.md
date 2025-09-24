@@ -135,7 +135,6 @@ dist/my-model/
 **Deploy**: `kubectl apply -f ./dist/my-model/deploy/k3s/` or `cp deploy/systemd/*.service /etc/systemd/system/`
 
 
-
 ## 🛠️ Tech Stack
 
 * **llama.cpp** - Core runtime with broad CPU/GPU compatibility
@@ -144,10 +143,6 @@ dist/my-model/
 * **GGUF** - Model format with efficient quantization
 * **Docker** - Container packaging and distribution
 * **Pytest** - Testing and validation harness
-
-### Optional Performance Components (Future)
-* **Go/Rust** - Performance-critical packaging operations
-* **Sigstore/cosign** - Signed manifests and artifact verification
 
 ## 🔧 Development
 
@@ -161,8 +156,6 @@ make all     # Format, lint, and test
 make check   # CI checks only
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
 ## 📜 License
 
 ### Apache-2.0
@@ -171,6 +164,6 @@ Free to use, modify, and contribute.
 
 ## 🤝 Contributing
 
-Alki is actively developed and contributions are very welcome!
+Alki is actively developed and contributions are welcome.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
