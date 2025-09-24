@@ -22,7 +22,7 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 
 ### Model Ingestion & Conversion
 - [x] Pre-converted GGUF model support (HuggingFace & local files)
-- [ ] **Direct HF → GGUF conversion** ⚡ *Priority*
+- [x] **Direct HF → GGUF conversion**
 - [ ] **Pluggable converter architecture**
 - [ ] **Multi-quantization profiles in single command** (Q4_K_M, Q5_K_M, Q8_0)
 - [ ] Automatic architecture detection and optimization
@@ -42,8 +42,8 @@ This roadmap outlines the development phases for Alki, the open-source edge LLM 
 ### Runtime Integration
 - [x] GGUF model loading with llama-cpp-python
 - [x] Model capability extraction (context, vocab, embedding size)
+- [x] **Performance benchmarking framework** - Local benchmarking for pre-deployment model evaluation \u2705
 - [ ] **Production llama-server integration and wrapping**
-- [ ] **Performance benchmarking framework** - Local benchmarking for pre-deployment model evaluation ⚡ *Priority*
 
 ### Deployment Support
 - [x] Systemd service configs (auto-included in bundles)
