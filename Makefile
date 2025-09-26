@@ -1,8 +1,12 @@
-.PHONY: install test lint format check-format check all clean
+.PHONY: install install-all test lint format check-format check all clean
 
-# Install development dependencies
+# Install minimal dependencies (validation, CLI, testing tools)
 install:
 	pip install -e .[dev]
+
+# Install all dependencies including conversion capabilities (~2GB PyTorch download)
+install-all:
+	pip install -e .[dev,convert]
 
 # Run tests
 test:

@@ -14,20 +14,29 @@ Alki takes a Hugging Face model, converts it to GGUF format, applies quantizatio
 
 ## 🚀 Quickstart
 
+**Get started immediately** (works with base install):
 ```bash
-# Validate GGUF models with benchmarking
+# Validate pre-converted GGUF models with benchmarking
 alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --benchmark
+```
+
+**For HuggingFace → GGUF conversion** (requires conversion dependencies):
+```bash
+# Install conversion dependencies (~2GB download for PyTorch)
+pip install -e .[convert]
 
 # Convert HF model to GGUF and create deployment bundle
-alki pack "Qwen/Qwen2-0.5B" --quantize Q8_0 --name qwen2-model
+alki pack "TinyLlama/TinyLlama-1.1B-Chat-v1.0" --quantize Q8_0 --name tinyllama-chat
 
 # Build and test container image
-alki image build ./dist/qwen2-model --tag mymodel:latest
-alki image test mymodel:latest
+alki image build ./dist/tinyllama-chat --tag tinyllama:latest
+alki image test tinyllama:latest
 
 # Publish for fleet deployment
-alki publish ./dist/qwen2-model --registry myregistry.com/ai --tag v1.0
+alki publish ./dist/tinyllama-chat --registry myregistry.com/ai --tag v1.0
 ```
+
+> **Note**: First-time usage downloads llama.cpp conversion tools (~150MB). Conversion dependencies include PyTorch and are optional for pre-converted GGUF models.
 
 ## 📍 Status & Roadmap
 
@@ -62,7 +71,12 @@ alki publish ./dist/qwen2-model --registry myregistry.com/ai --tag v1.0
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+
+# Minimal install (validation, pre-converted GGUF support)
 make install
+
+# OR full install (includes HuggingFace → GGUF conversion)
+make install-all
 ```
 
 ## 🎮 Runtime Inference
@@ -74,7 +88,7 @@ Once deployed, your models serve an OpenAI-compatible API via llama-server:
 curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen3-0.6b-instruct",
+    "model": "tinyllama-chat",
     "messages": [{"role": "user", "content": "Tell me about Alki beach in Seattle, WA"}],
     "max_tokens": 100,
     "temperature": 0.8
@@ -85,7 +99,7 @@ import openai
 client = openai.OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed")
 
 response = client.chat.completions.create(
-    model="qwen3-0.6b-instruct",
+    model="tinyllama-chat",
     messages=[{"role": "user", "content": "Tell me about Alki beach in Seattle, WA"}],
     max_tokens=100
 )
