@@ -72,7 +72,7 @@ class TestImageBuilder:
                 dockerfile = builder.generate_dockerfile(bundle_path)
 
                 # Check essential Dockerfile elements
-                assert "FROM ghcr.io/ggerganov/llama.cpp:server" in dockerfile
+                assert "FROM ghcr.io/ggml-org/llama.cpp:server" in dockerfile
                 assert '"-m", "/app/models/test-model-q4_k_m.gguf"' in dockerfile
                 assert '"--ctx-size", "2048"' in dockerfile
                 assert "EXPOSE 8080" in dockerfile
@@ -93,7 +93,7 @@ class TestImageBuilder:
                     bundle_path, base_image="alpine", runtime_config=runtime_config
                 )
 
-                assert "FROM ghcr.io/ggerganov/llama.cpp:server-alpine" in dockerfile
+                assert "FROM ghcr.io/ggml-org/llama.cpp:server-alpine" in dockerfile
                 assert '"--ctx-size", "4096"' in dockerfile
                 assert '"--port", "9000"' in dockerfile
                 assert "EXPOSE 9000" in dockerfile

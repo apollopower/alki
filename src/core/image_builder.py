@@ -41,9 +41,9 @@ class ImageBuilder:
 
     # Base image options
     BASE_IMAGES = {
-        "alpine": "ghcr.io/ggerganov/llama.cpp:server-alpine",
-        "ubuntu": "ghcr.io/ggerganov/llama.cpp:server-ubuntu",
-        "debian": "ghcr.io/ggerganov/llama.cpp:server",  # default
+        "alpine": "ghcr.io/ggml-org/llama.cpp:server-alpine",
+        "ubuntu": "ghcr.io/ggml-org/llama.cpp:server-ubuntu",
+        "debian": "ghcr.io/ggml-org/llama.cpp:server",  # default
     }
 
     def __init__(self, docker_client: Optional[str] = "docker"):

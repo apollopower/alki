@@ -681,7 +681,7 @@ spec:
           mountPath: /models
       containers:
       - name: llama-server
-        image: ghcr.io/ggerganov/llama.cpp:server
+        image: ghcr.io/ggml-org/llama.cpp:server
         ports:
         - containerPort: 8080
           name: http

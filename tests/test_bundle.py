@@ -250,7 +250,7 @@ class TestManifestGenerator:
             context_size=2048,
         )
 
-        assert "FROM ghcr.io/ggerganov/llama.cpp:server" in content
+        assert "FROM ghcr.io/ggml-org/llama.cpp:server" in content
         assert "LLAMA_ARG_CTX_SIZE=2048" in content
         assert "test.gguf" in content
 
@@ -281,7 +281,7 @@ class TestManifestGenerator:
         assert "apiVersion: v1" in content
         assert "apiVersion: apps/v1" in content
         assert "name: test-model" in content
-        assert "ghcr.io/ggerganov/llama.cpp:server" in content
+        assert "ghcr.io/ggml-org/llama.cpp:server" in content
 
         # Check resource limits and health checks
         assert "resources:" in content

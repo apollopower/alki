@@ -267,7 +267,7 @@ WantedBy=multi-user.target
             chat_env = (
                 f"ENV LLAMA_ARG_CHAT_FORMAT={chat_template}\n" if chat_template else ""
             )
-            return f"""FROM ghcr.io/ggerganov/llama.cpp:server
+            return f"""FROM ghcr.io/ggml-org/llama.cpp:server
 
 COPY models/{model_filename} /models/{model_filename}
 
@@ -338,7 +338,7 @@ spec:
     spec:
       containers:
       - name: llama-server
-        image: ghcr.io/ggerganov/llama.cpp:server
+        image: ghcr.io/ggml-org/llama.cpp:server
         ports:
         - containerPort: 8080
           name: http
@@ -446,7 +446,7 @@ spec:
                     "SPDXID": "SPDXRef-Runtime",
                     "name": "llama.cpp",
                     "version": "latest",
-                    "downloadLocation": "https://github.com/ggerganov/llama.cpp",
+                    "downloadLocation": "https://github.com/ggml-org/llama.cpp",
                     "filesAnalyzed": False,
                     "licenseConcluded": "MIT",
                 },
