@@ -136,6 +136,7 @@ class ImageBuilder:
             str(port),
             "--ctx-size",
             str(ctx_size),
+            "--jinja",
         ]
         if ngl > 0:
             cmd_args.extend(["--n-gpu-layers", str(ngl)])
