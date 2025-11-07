@@ -43,9 +43,10 @@ alki publish ./dist/tinyllama-chat --registry myregistry.com/ai --tag v1.0
 **✅ Available Now:**
 - Direct HF → GGUF conversion (Q8_0 quantization)
 - Pre-converted GGUF model support (all quantization profiles)
+- **NVIDIA GPU acceleration** (`--ngl` parameter for layer offloading)
 - Performance benchmarking (tokens/sec, memory usage)
 - Production bundles with manifests, SBOMs, and deployment configs
-- Container images with llama-server runtime
+- Container images with llama-server runtime (CPU and CUDA variants)
 - Multi-platform deployment (Docker, K8s, systemd)
 - CLI: `validate`, `pack`, `image`, `publish` commands
 
@@ -78,6 +79,38 @@ make install
 # OR full install (includes HuggingFace → GGUF conversion)
 make install-all
 ```
+
+## 🚀 GPU Acceleration
+
+Alki supports NVIDIA GPU acceleration to significantly speed up inference:
+
+### Creating GPU-Enabled Bundles
+
+```bash
+# Create bundle with GPU layers (recommended: 16-24 for RTX 4060)
+alki pack "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --ngl 20
+
+# Build CUDA-enabled container image
+alki image build ./dist/qwen3-0-6b-gguf --tag qwen3:gpu --base cuda
+
+# Run with GPU support
+docker run --gpus all -p 8080:8080 qwen3:gpu
+```
+
+### GPU Layer Recommendations
+
+| GPU Model | 1B Models | 3B Models | 7B Models |
+|-----------|-----------|-----------|-----------|
+| RTX 4060 (8GB) | 20-28 layers | 12-20 layers | 8-16 layers |
+| RTX 4070 (12GB) | 32+ layers | 24-32 layers | 16-24 layers |
+| RTX 4080 (16GB) | 32+ layers | 32+ layers | 24-32 layers |
+
+**Prerequisites:**
+- NVIDIA drivers installed
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+- Docker with GPU support
+
+**Monitor GPU usage:** `nvidia-smi`
 
 ## 🎮 Runtime Inference
 

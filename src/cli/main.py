@@ -198,6 +198,11 @@ def pack(
         "--no-cleanup",
         help="Skip cache cleanup after packing (HuggingFace models only)",
     ),
+    ngl: int = typer.Option(
+        0,
+        "--ngl",
+        help="Number of GPU layers to offload (0 = CPU-only, >0 = GPU acceleration)",
+    ),
 ):
     """
     Create a deployment bundle from a model (GGUF or HuggingFace).
@@ -450,6 +455,7 @@ def pack(
         license=model_info.license,
         source_model=final_model_path.name,
         context_size=actual_context,
+        ngl=ngl,
     )
 
     bundle.create_runtime_manifest()
@@ -759,13 +765,16 @@ def image_build(
         ..., "--tag", "-t", help="Docker image tag (e.g., 'mymodel:latest')"
     ),
     base: str = typer.Option(
-        "debian", "--base", "-b", help="Base image type (alpine, ubuntu, debian)"
+        "debian", "--base", "-b", help="Base image type (alpine, ubuntu, debian, cuda)"
     ),
     push: bool = typer.Option(
         False, "--push", help="Push image to registry after build"
     ),
     ctx_size: Optional[int] = typer.Option(
         None, "--ctx-size", "-c", help="Override context size for runtime"
+    ),
+    ngl: Optional[int] = typer.Option(
+        None, "--ngl", help="Override number of GPU layers for runtime"
     ),
     host: str = typer.Option("0.0.0.0", "--host", help="Host to bind server to"),
     port: int = typer.Option(8080, "--port", "-p", help="Port to bind server to"),
@@ -814,6 +823,8 @@ def image_build(
     runtime_config = {"host": host, "port": port}
     if ctx_size:
         runtime_config["ctx"] = ctx_size
+    if ngl is not None:
+        runtime_config["ngl"] = ngl
 
     try:
         # Initialize image builder
