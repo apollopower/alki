@@ -189,6 +189,7 @@ class Bundle:
         source_model: Optional[str] = None,
         context_size: int = 4096,
         threads: str = "auto",
+        ngl: int = 0,
     ) -> BundleManifest:
         """
         Create bundle manifest
@@ -200,6 +201,7 @@ class Bundle:
             source_model: Source model identifier
             context_size: Default context window size
             threads: Default thread configuration
+            ngl: Number of GPU layers to offload (0 = CPU-only)
 
         Returns:
             BundleManifest object
@@ -212,7 +214,7 @@ class Bundle:
             defaults={
                 "ctx": context_size,
                 "threads": threads,
-                "ngl": 0,  # Number of GPU layers (0 for CPU-only by default)
+                "ngl": ngl,  # Number of GPU layers (0 for CPU-only by default)
             },
             template=template,
             license=license,
