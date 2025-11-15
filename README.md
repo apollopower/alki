@@ -15,12 +15,14 @@ Alki takes a Hugging Face model, converts it to GGUF format, applies quantizatio
 ## 🚀 Quickstart
 
 **Get started immediately** (works with base install):
+
 ```bash
 # Validate pre-converted GGUF models with benchmarking
 alki validate "Qwen/Qwen3-0.6B-GGUF" --filename "*Q8_0.gguf" --benchmark
 ```
 
 **For HuggingFace → GGUF conversion** (requires conversion dependencies):
+
 ```bash
 # Install conversion dependencies (~2GB download for PyTorch)
 pip install -e .[convert]
@@ -41,24 +43,24 @@ alki publish ./dist/tinyllama-chat --registry myregistry.com/ai --tag v1.0
 ## 📍 Status & Roadmap
 
 **✅ Available Now:**
-- Direct HF → GGUF conversion (Q8_0 quantization)
-- Pre-converted GGUF model support (all quantization profiles)
-- **NVIDIA GPU acceleration** (`--ngl` parameter for layer offloading)
-- Performance benchmarking (tokens/sec, memory usage)
-- Production bundles with manifests, SBOMs, and deployment configs
-- Container images with llama-server runtime (CPU and CUDA variants)
-- Multi-platform deployment (Docker, K8s, systemd)
-- CLI: `validate`, `pack`, `image`, `publish` commands
+* Direct HF → GGUF conversion (Q8_0 quantization)
+* Pre-converted GGUF model support (all quantization profiles)
+* **NVIDIA GPU acceleration** (`--ngl` parameter for layer offloading)
+* Performance benchmarking (tokens/sec, memory usage)
+* Production bundles with manifests, SBOMs, and deployment configs
+* Container images with llama-server runtime (CPU and CUDA variants)
+* Multi-platform deployment (Docker, K8s, systemd)
+* CLI: `validate`, `pack`, `image`, `publish` commands
 
 **🚧 Phase 1 (In Progress):**
-- Advanced quantization (Q4_K_M, Q5_K_M)
-- Hardware optimization profiles
-- End-to-end validation pipeline
+* Advanced quantization (Q4_K_M, Q5_K_M)
+* Hardware optimization profiles
+* End-to-end validation pipeline
 
 **🚀 Phase 2 (Planned):**
-- Multi-runtime backends (Ollama, MLC-LLM, ONNX)
-- Multi-modal model support
-- Hardware-specific optimization
+* Multi-runtime backends (Ollama, MLC-LLM, ONNX)
+* Multi-modal model support
+* Hardware-specific optimization
 
 **See [ROADMAP.md](ROADMAP.md) for complete development plan.**
 
@@ -82,7 +84,12 @@ make install-all
 
 ## 🚀 GPU Acceleration
 
-Alki supports NVIDIA GPU acceleration to significantly speed up inference:
+Alki supports NVIDIA GPU acceleration to significantly speed up inference
+
+### Prerequisites
+
+1. **Verify Host Drivers:** Ensure your NVIDIA drivers are correctly installed and functioning on the host system via `nvidia-smi`
+2. **Verify Docker Version:** Confirm that you are running Docker Engine version 19.03 or later, as the `--gpus` flag requires it
 
 ### Creating GPU-Enabled Bundles
 
@@ -106,9 +113,9 @@ docker run --gpus all -p 8080:8080 qwen3:gpu
 | RTX 4080 (16GB) | 32+ layers | 32+ layers | 24-32 layers |
 
 **Prerequisites:**
-- NVIDIA drivers installed
-- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
-- Docker with GPU support
+* NVIDIA drivers installed
+* [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+* Docker with GPU support
 
 **Monitor GPU usage:** `nvidia-smi`
 
@@ -181,7 +188,6 @@ dist/my-model/
 
 **Deploy**: `kubectl apply -f ./dist/my-model/deploy/k3s/` or `cp deploy/systemd/*.service /etc/systemd/system/`
 
-
 ## 🛠️ Tech Stack
 
 * **llama.cpp** - Core runtime with broad CPU/GPU compatibility
@@ -214,3 +220,4 @@ Free to use, modify, and contribute.
 Alki is actively developed and contributions are welcome.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
